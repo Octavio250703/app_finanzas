@@ -1,0 +1,695 @@
+/* Estilos personalizados para el Gestor de Inversiones */
+
+:root {
+    --primary-color: #007bff;
+    --success-color: #28a745;
+    --warning-color: #ffc107;
+    --danger-color: #dc3545;
+    --disabled-color: #6c757d;
+    --sidebar-width: 250px;
+    --navbar-height: 56px;
+}
+
+body {
+    background-color: #f8f9fa;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    padding-top: var(--navbar-height);
+}
+
+/* ==========================================
+   NAVBAR Y SIDEBAR
+   ========================================== */
+
+/* Navbar personalizada */
+.navbar {
+    z-index: 1030;
+}
+
+.navbar-brand {
+    font-weight: bold;
+    font-size: 1.5rem;
+}
+
+/* Sidebar */
+.sidebar {
+    position: fixed;
+    top: var(--navbar-height);
+    bottom: 0;
+    left: 0;
+    z-index: 100;
+    padding: 0;
+    box-shadow: inset -1px 0 0 rgba(0, 0, 0, .1);
+    background-color: #f8f9fa;
+    border-right: 1px solid #dee2e6;
+    overflow-y: auto;
+}
+
+.sidebar .nav-link {
+    color: #333;
+    padding: 0.75rem 1rem;
+    border-radius: 0;
+    transition: all 0.2s ease-in-out;
+}
+
+.sidebar .nav-link:hover {
+    color: var(--primary-color);
+    background-color: rgba(0, 123, 255, 0.1);
+}
+
+.sidebar .nav-link.active {
+    color: var(--primary-color);
+    background-color: rgba(0, 123, 255, 0.1);
+    border-right: 3px solid var(--primary-color);
+}
+
+.sidebar .nav-link i {
+    width: 16px;
+    text-align: center;
+}
+
+.sidebar-heading {
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.1rem;
+    font-weight: 600;
+}
+
+/* Main content */
+.main-content {
+    margin-left: 0;
+    padding-top: 1rem;
+}
+
+@media (min-width: 768px) {
+    .main-content {
+        margin-left: var(--sidebar-width);
+    }
+}
+
+/* ==========================================
+   CARDS Y COMPONENTES BÁSICOS
+   ========================================== */
+
+/* Cards de inversiones y organismos */
+.card {
+    transition: transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
+    border: none;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    border-radius: 0.75rem;
+}
+
+.card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+}
+
+.card-header {
+    background-color: #f8f9fa;
+    border-bottom: 1px solid #dee2e6;
+    border-radius: 0.75rem 0.75rem 0 0 !important;
+    font-weight: 600;
+}
+
+/* Inversiones y organismos inhabilitados */
+.disabled-investment, .disabled-organism {
+    opacity: 0.6;
+    background-color: #f8f9fa;
+    border: 1px solid #dee2e6 !important;
+}
+
+.disabled-investment .card-header, .disabled-organism .card-header {
+    background-color: #e9ecef;
+    color: #6c757d;
+}
+
+.disabled-investment .card-body, .disabled-organism .card-body {
+    color: #6c757d;
+}
+
+.disabled-investment:hover, .disabled-organism:hover {
+    transform: none;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+/* ==========================================
+   ESTADÍSTICAS Y MÉTRICAS
+   ========================================== */
+
+/* Dashboard stats */
+.dashboard-stats {
+    background: linear-gradient(135deg, var(--primary-color), #0056b3);
+    color: white;
+    border-radius: 1rem;
+    padding: 2rem;
+    margin-bottom: 2rem;
+}
+
+.stats-card {
+    background: linear-gradient(135deg, #fff, #f8f9fa);
+    border: 1px solid #dee2e6;
+    border-radius: 0.75rem;
+    padding: 1.5rem;
+    text-align: center;
+    transition: all 0.3s ease;
+}
+
+.stats-card:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 6px 20px rgba(0,0,0,0.1);
+}
+
+.stats-value {
+    font-size: 2rem;
+    font-weight: bold;
+    color: var(--primary-color);
+}
+
+.stats-label {
+    font-size: 0.9rem;
+    color: #6c757d;
+    margin-top: 0.5rem;
+}
+
+/* Cards de información financiera */
+.financial-card {
+    background: linear-gradient(135deg, var(--success-color), #1e7e34);
+    color: white;
+}
+
+.financial-card .card-header {
+    background: rgba(255, 255, 255, 0.1);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+/* ==========================================
+   ORGANISMOS ESPECÍFICOS
+   ========================================== */
+
+.organism-card {
+    border-left: 4px solid var(--primary-color);
+}
+
+.organism-header {
+    background: linear-gradient(135deg, #fff, #f8f9fa);
+    padding: 2rem;
+    border-radius: 0.75rem;
+    margin-bottom: 2rem;
+    border-left: 4px solid var(--primary-color);
+}
+
+.organism-title {
+    color: var(--primary-color);
+    font-weight: bold;
+    margin-bottom: 0.5rem;
+}
+
+.organism-subtitle {
+    color: #6c757d;
+    font-size: 1.1rem;
+}
+
+/* ==========================================
+   CALIFICACIONES Y ESTRELLAS
+   ========================================== */
+
+.rating-container {
+    padding: 1.5rem;
+    background: #fff;
+    border-radius: 0.75rem;
+    border: 1px solid #dee2e6;
+}
+
+.rating-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.75rem 0;
+    border-bottom: 1px solid #f8f9fa;
+}
+
+.rating-item:last-child {
+    border-bottom: none;
+}
+
+.rating-label {
+    font-weight: 500;
+    color: #495057;
+}
+
+.rating-stars {
+    color: #ffc107;
+    font-size: 1.2rem;
+}
+
+.rating-value {
+    font-weight: bold;
+    color: var(--primary-color);
+    margin-left: 0.5rem;
+}
+
+/* Input de estrellas */
+.star-rating {
+    display: flex;
+    flex-direction: row-reverse;
+    justify-content: flex-end;
+}
+
+.star-rating input {
+    display: none;
+}
+
+.star-rating label {
+    color: #ddd;
+    font-size: 1.5rem;
+    cursor: pointer;
+    transition: color 0.2s ease-in-out;
+}
+
+.star-rating label:hover,
+.star-rating label:hover ~ label,
+.star-rating input:checked ~ label {
+    color: #ffc107;
+}
+
+/* ==========================================
+   CHAT Y MENSAJES
+   ========================================== */
+
+.chat-container {
+    background: #fff;
+    border-radius: 0.75rem;
+    border: 1px solid #dee2e6;
+    max-height: 400px;
+    display: flex;
+    flex-direction: column;
+}
+
+.chat-header {
+    padding: 1rem;
+    background: #f8f9fa;
+    border-bottom: 1px solid #dee2e6;
+    border-radius: 0.75rem 0.75rem 0 0;
+    font-weight: 600;
+}
+
+.chat-messages {
+    flex: 1;
+    overflow-y: auto;
+    padding: 1rem;
+    min-height: 200px;
+    max-height: 250px;
+}
+
+.chat-message {
+    margin-bottom: 1rem;
+    padding: 0.75rem;
+    background: #f8f9fa;
+    border-radius: 0.5rem;
+    border-left: 3px solid var(--primary-color);
+}
+
+.chat-message-author {
+    font-weight: 600;
+    color: var(--primary-color);
+    margin-bottom: 0.25rem;
+}
+
+.chat-message-time {
+    font-size: 0.8rem;
+    color: #6c757d;
+    margin-bottom: 0.5rem;
+}
+
+.chat-message-content {
+    color: #495057;
+    line-height: 1.4;
+}
+
+.chat-input {
+    padding: 1rem;
+    border-top: 1px solid #dee2e6;
+    border-radius: 0 0 0.75rem 0.75rem;
+    background: #f8f9fa;
+}
+
+.no-messages {
+    text-align: center;
+    color: #6c757d;
+    font-style: italic;
+    padding: 2rem;
+}
+
+/* ==========================================
+   GRÁFICOS
+   ========================================== */
+
+.chart-container {
+    position: relative;
+    background: #fff;
+    border-radius: 0.75rem;
+    padding: 1.5rem;
+    border: 1px solid #dee2e6;
+    margin-bottom: 2rem;
+}
+
+.chart-title {
+    font-weight: 600;
+    color: #495057;
+    margin-bottom: 1rem;
+    text-align: center;
+}
+
+.chart-wrapper {
+    position: relative;
+    height: 300px;
+}
+
+/* ==========================================
+   BOTONES Y FORMULARIOS
+   ========================================== */
+
+/* Badges personalizados */
+.badge {
+    font-size: 0.8rem;
+    padding: 0.5em 0.7em;
+    border-radius: 0.5rem;
+}
+
+.badge-status-active {
+    background-color: var(--success-color);
+}
+
+.badge-status-study {
+    background-color: var(--warning-color);
+    color: #000;
+}
+
+.badge-status-closed {
+    background-color: var(--danger-color);
+}
+
+/* Formularios */
+.form-control:focus, .form-select:focus {
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25);
+}
+
+.input-group-text {
+    background-color: var(--primary-color);
+    color: white;
+    border-color: var(--primary-color);
+}
+
+/* Botones personalizados */
+.btn {
+    border-radius: 0.5rem;
+    font-weight: 500;
+    transition: all 0.2s ease-in-out;
+    padding: 0.5rem 1rem;
+}
+
+.btn:hover {
+    transform: translateY(-1px);
+}
+
+.btn-primary {
+    background-color: var(--primary-color);
+    border-color: var(--primary-color);
+}
+
+.btn-primary:hover {
+    background-color: #0056b3;
+    border-color: #0056b3;
+}
+
+.btn-sm {
+    padding: 0.25rem 0.5rem;
+    font-size: 0.875rem;
+}
+
+/* ==========================================
+   ALERTAS Y NOTIFICACIONES
+   ========================================== */
+
+/* Alertas personalizadas */
+.alert {
+    border: none;
+    border-radius: 0.7rem;
+    border-left: 4px solid;
+}
+
+.alert-success {
+    background-color: #d4edda;
+    color: #155724;
+    border-left-color: var(--success-color);
+}
+
+.alert-warning {
+    background-color: #fff3cd;
+    color: #856404;
+    border-left-color: var(--warning-color);
+}
+
+.alert-danger {
+    background-color: #f8d7da;
+    color: #721c24;
+    border-left-color: var(--danger-color);
+}
+
+.alert-info {
+    background-color: #d1ecf1;
+    color: #0c5460;
+    border-left-color: #17a2b8;
+}
+
+/* ==========================================
+   UTILIDADES Y COMPONENTES ADICIONALES
+   ========================================== */
+
+/* Dropdown menus */
+.dropdown-menu {
+    border: none;
+    box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+    border-radius: 0.5rem;
+}
+
+.dropdown-item:hover {
+    background-color: #f8f9fa;
+}
+
+/* Tabla de inversiones */
+.table {
+    background-color: white;
+    border-radius: 0.5rem;
+    overflow: hidden;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.table th {
+    background-color: var(--primary-color);
+    color: white;
+    border: none;
+    font-weight: 600;
+}
+
+.table td {
+    border-color: #e9ecef;
+    vertical-align: middle;
+}
+
+/* Loading states */
+.loading {
+    opacity: 0.7;
+    pointer-events: none;
+}
+
+.loading-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(255, 255, 255, 0.8);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 0.75rem;
+}
+
+/* Progress bars para rendimientos */
+.progress {
+    height: 10px;
+    border-radius: 5px;
+}
+
+.progress-bar {
+    border-radius: 5px;
+}
+
+/* Estados de inversión */
+.status-active {
+    color: var(--success-color);
+    font-weight: bold;
+}
+
+.status-study {
+    color: var(--warning-color);
+    font-weight: bold;
+}
+
+.status-closed {
+    color: var(--danger-color);
+    font-weight: bold;
+}
+
+/* ==========================================
+   ANIMACIONES
+   ========================================== */
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(20px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+.fade-in {
+    animation: fadeIn 0.5s ease-in-out;
+}
+
+@keyframes slideIn {
+    from { opacity: 0; transform: translateX(-20px); }
+    to { opacity: 1; transform: translateX(0); }
+}
+
+.slide-in {
+    animation: slideIn 0.3s ease-in-out;
+}
+
+/* ==========================================
+   LOGIN/REGISTER FORMS
+   ========================================== */
+
+.login-container, .register-container {
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+}
+
+.login-card, .register-card {
+    backdrop-filter: blur(10px);
+    background: rgba(255, 255, 255, 0.95);
+    border: none;
+    border-radius: 1rem;
+}
+
+/* ==========================================
+   RESPONSIVE DESIGN
+   ========================================== */
+
+@media (max-width: 768px) {
+    .sidebar {
+        transform: translateX(-100%);
+        transition: transform 0.3s ease-in-out;
+    }
+    
+    .sidebar.show {
+        transform: translateX(0);
+    }
+    
+    .main-content {
+        margin-left: 0;
+    }
+    
+    .card {
+        margin-bottom: 1rem;
+    }
+    
+    .btn {
+        margin-bottom: 0.5rem;
+        width: 100%;
+    }
+    
+    .btn-group .btn {
+        width: auto;
+    }
+    
+    .dashboard-stats {
+        padding: 1rem;
+        text-align: center;
+    }
+    
+    .chart-wrapper {
+        height: 250px;
+    }
+    
+    .stats-value {
+        font-size: 1.5rem;
+    }
+}
+
+@media (max-width: 576px) {
+    .organism-header {
+        padding: 1rem;
+    }
+    
+    .rating-item {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+    
+    .chat-messages {
+        min-height: 150px;
+        max-height: 200px;
+    }
+    
+    .chart-wrapper {
+        height: 200px;
+    }
+}
+
+/* ==========================================
+   TOOLTIPS Y OTROS
+   ========================================== */
+
+.tooltip-inner {
+    background-color: var(--primary-color);
+    border-radius: 0.5rem;
+}
+
+/* Iconos */
+.fas, .far {
+    margin-right: 0.3rem;
+}
+
+/* Mejoras de accesibilidad */
+.sr-only {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    border: 0;
+}
+
+/* Focus states mejorados */
+.btn:focus, .form-control:focus, .form-select:focus {
+    outline: 2px solid var(--primary-color);
+    outline-offset: 2px;
+}
+
+/* Estados de carga */
+.spinner-border-sm {
+    width: 1rem;
+    height: 1rem;
+}
+
+/* Dark mode support (preparado para futuras implementaciones) */
+@media (prefers-color-scheme: dark) {
+    :root {
+        --bg-color: #212529;
+        --text-color: #ffffff;
+        --card-bg: #343a40;
+    }
+}

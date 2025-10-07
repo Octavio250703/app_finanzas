@@ -1,0 +1,520 @@
+{% extends "base_sidebar.html" %}
+
+{% block title %}Datos de Mercado - Investment Manager{% endblock %}
+
+{% block extra_head %}
+<style>
+    .market-data-section {
+        background: white;
+        border-radius: 0.75rem;
+        padding: 1.5rem;
+        border: 1px solid #dee2e6;
+        margin-bottom: 2rem;
+    }
+    
+    .refresh-button {
+        transition: all 0.3s ease;
+    }
+    
+    .refresh-button:hover {
+        transform: rotate(180deg);
+    }
+    
+    .market-table {
+        font-family: 'Courier New', monospace;
+    }
+    
+    .price-cell {
+        font-weight: bold;
+        text-align: right;
+    }
+    
+    .price-positive {
+        color: #28a745;
+    }
+    
+    .price-negative {
+        color: #dc3545;
+    }
+    
+    .loading-overlay {
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: rgba(255, 255, 255, 0.8);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 0.75rem;
+        z-index: 1000;
+    }
+    
+    .last-updated {
+        font-size: 0.875rem;
+        color: #6c757d;
+    }
+    
+    .stats-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 1rem;
+        margin-bottom: 2rem;
+    }
+    
+    .stat-card {
+        background: linear-gradient(135deg, #007bff, #0056b3);
+        color: white;
+        border-radius: 0.75rem;
+        padding: 1.5rem;
+        text-align: center;
+    }
+    
+    .stat-value {
+        font-size: 2rem;
+        font-weight: bold;
+        margin-bottom: 0.5rem;
+    }
+    
+    .stat-label {
+        font-size: 0.875rem;
+        opacity: 0.9;
+    }
+</style>
+
+<script>
+    // Datos globales para JavaScript
+    window.MARKET_DATA = {{ market_data | tojson | safe }};
+</script>
+{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h1><i class="fas fa-chart-line me-2"></i>Datos de Mercado en Tiempo Real</h1>
+        <p class="text-muted mb-0">Información actualizada desde Google Sheets</p>
+    </div>
+    <div class="btn-group">
+        <button id="refreshButton" class="btn btn-primary" onclick="refreshMarketData()">
+            <i class="fas fa-sync-alt me-2 refresh-button"></i>Actualizar Datos
+        </button>
+        <button class="btn btn-success" onclick="saveSnapshot()">
+            <i class="fas fa-save me-2"></i>Guardar Snapshot
+        </button>
+        <button class="btn btn-warning" onclick="forceUpdate()">
+            <i class="fas fa-robot me-2"></i>Forzar Automático
+        </button>
+        <a href="{{ url_for('market_history') }}" class="btn btn-info">
+            <i class="fas fa-history me-2"></i>Ver Histórico
+        </a>
+    </div>
+</div>
+
+<!-- Estadísticas Rápidas (siempre visibles, se actualizan dinámicamente) -->
+<div class="stats-grid" id="statsGrid" style="display: none;">
+    <div class="stat-card">
+        <div class="stat-value" id="symbolCount">-</div>
+        <div class="stat-label">Símbolos Monitoreados</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-value" id="avgPrice">-</div>
+        <div class="stat-label">Precio Promedio</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-value" id="maxPrice">-</div>
+        <div class="stat-label">Precio Máximo</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-value" id="minPrice">-</div>
+        <div class="stat-label">Precio Mínimo</div>
+    </div>
+</div>
+
+<!-- Tabla de Datos de Mercado -->
+<div class="market-data-section position-relative">
+    <div id="loadingOverlay" class="loading-overlay d-none">
+        <div class="text-center">
+            <div class="spinner-border text-primary" role="status">
+                <span class="visually-hidden">Cargando...</span>
+            </div>
+            <div class="mt-2">Actualizando datos...</div>
+        </div>
+    </div>
+    
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h5><i class="fas fa-table me-2"></i>Cotizaciones</h5>
+        <div class="last-updated">
+            <i class="fas fa-clock me-1"></i>
+            <span id="lastUpdated">Última actualización: Cargando...</span>
+        </div>
+    </div>
+    
+    <!-- Tabla siempre visible, se llena dinámicamente -->
+    <div class="table-responsive" id="dataTable" style="display: none;">
+        <table class="table table-hover market-table" id="marketTable">
+            <thead class="table-primary">
+                <tr>
+                    <th><i class="fas fa-hashtag me-1"></i>Símbolo</th>
+                    <th class="text-end"><i class="fas fa-dollar-sign me-1"></i>Precio</th>
+                    <th class="text-center"><i class="fas fa-chart-area me-1"></i>Acción</th>
+                </tr>
+            </thead>
+            <tbody id="marketTableBody">
+                <!-- Se llena dinámicamente con JavaScript -->
+            </tbody>
+        </table>
+    </div>
+    
+    <!-- Mensaje de carga inicial -->
+    <div class="text-center py-5" id="loadingMessage">
+        <div class="mb-4">
+            <div class="spinner-border text-primary" role="status">
+                <span class="visually-hidden">Cargando...</span>
+            </div>
+        </div>
+        <h3 class="text-muted">Cargando datos de mercado...</h3>
+        <p class="text-muted">Obteniendo datos desde Google Sheets...</p>
+    </div>
+    
+    <!-- Mensaje de error (inicialmente oculto) -->
+    <div class="text-center py-5" id="errorMessage" style="display: none;">
+        <div class="mb-4">
+            <i class="fas fa-exclamation-triangle fa-5x text-warning"></i>
+        </div>
+        <h3 class="text-muted">No hay datos disponibles</h3>
+        <p class="text-muted">No se pudieron obtener datos del Google Sheet.</p>
+        <button class="btn btn-primary" onclick="refreshMarketData()">
+            <i class="fas fa-sync-alt me-2"></i>Reintentar
+        </button>
+    </div>
+</div>
+
+<!-- Modal para detalles -->
+<div class="modal fade" id="detailsModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title"><i class="fas fa-info-circle me-2"></i>Detalles del Símbolo</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body" id="modalBody">
+                <!-- Contenido dinámico -->
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    console.log('📊 Market Data Page - Datos cargados:', window.MARKET_DATA);
+    
+    // Si hay datos iniciales, mostrarlos
+    if (window.MARKET_DATA && window.MARKET_DATA.length > 0) {
+        showDataView();
+        updateMarketTable(window.MARKET_DATA);
+        calculateStats();
+    } else {
+        // Si no hay datos iniciales, intentar cargarlos automáticamente
+        console.log('🔄 No hay datos iniciales, cargando desde API...');
+        refreshMarketData();
+    }
+    
+    // Actualizar timestamp
+    updateTimestamp();
+});
+
+function calculateStats() {
+    if (!window.MARKET_DATA || window.MARKET_DATA.length === 0) {
+        return;
+    }
+    
+    const prices = window.MARKET_DATA
+        .map(item => parseFloat(item.price))
+        .filter(price => !isNaN(price));
+    
+    if (prices.length === 0) return;
+    
+    const avgPrice = prices.reduce((a, b) => a + b, 0) / prices.length;
+    const maxPrice = Math.max(...prices);
+    const minPrice = Math.min(...prices);
+    
+    // Actualizar elementos
+    const symbolCountElement = document.getElementById('symbolCount');
+    const avgElement = document.getElementById('avgPrice');
+    const maxElement = document.getElementById('maxPrice');
+    const minElement = document.getElementById('minPrice');
+    
+    if (symbolCountElement) symbolCountElement.textContent = window.MARKET_DATA.length;
+    if (avgElement) avgElement.textContent = `$${avgPrice.toFixed(2)}`;
+    if (maxElement) maxElement.textContent = `$${maxPrice.toFixed(2)}`;
+    if (minElement) minElement.textContent = `$${minPrice.toFixed(2)}`;
+}
+
+function refreshMarketData() {
+    console.log('🔄 Actualizando datos de mercado...');
+    
+    const loadingOverlay = document.getElementById('loadingOverlay');
+    const refreshButton = document.getElementById('refreshButton');
+    
+    // Mostrar loading
+    if (loadingOverlay) loadingOverlay.classList.remove('d-none');
+    if (refreshButton) refreshButton.disabled = true;
+    
+    // Llamar a la API
+    fetch('/api/market-data')
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                console.log('✅ Datos actualizados:', data.data);
+                window.MARKET_DATA = data.data;
+                
+                // Mostrar la vista de datos
+                showDataView();
+                
+                // Actualizar tabla
+                updateMarketTable(data.data);
+                
+                // Recalcular estadísticas
+                calculateStats();
+                
+                // Actualizar timestamp
+                updateTimestamp();
+                
+                // Mostrar mensaje de éxito
+                showToast('Datos actualizados correctamente', 'success');
+            } else {
+                throw new Error(data.error || 'Error desconocido');
+            }
+        })
+        .catch(error => {
+            console.error('❌ Error actualizando datos:', error);
+            showErrorView();
+            showToast('Error al actualizar los datos', 'error');
+        })
+        .finally(() => {
+            // Ocultar loading
+            if (loadingOverlay) loadingOverlay.classList.add('d-none');
+            if (refreshButton) refreshButton.disabled = false;
+        });
+}
+
+function showDataView() {
+    // Mostrar tabla y estadísticas
+    const dataTable = document.getElementById('dataTable');
+    const statsGrid = document.getElementById('statsGrid');
+    
+    // Ocultar mensajes
+    const loadingMessage = document.getElementById('loadingMessage');
+    const errorMessage = document.getElementById('errorMessage');
+    
+    if (dataTable) dataTable.style.display = 'block';
+    if (statsGrid) statsGrid.style.display = 'grid';
+    if (loadingMessage) loadingMessage.style.display = 'none';
+    if (errorMessage) errorMessage.style.display = 'none';
+}
+
+function showErrorView() {
+    // Mostrar mensaje de error
+    const errorMessage = document.getElementById('errorMessage');
+    
+    // Ocultar tabla, estadísticas y loading
+    const dataTable = document.getElementById('dataTable');
+    const statsGrid = document.getElementById('statsGrid');
+    const loadingMessage = document.getElementById('loadingMessage');
+    
+    if (errorMessage) errorMessage.style.display = 'block';
+    if (dataTable) dataTable.style.display = 'none';
+    if (statsGrid) statsGrid.style.display = 'none';
+    if (loadingMessage) loadingMessage.style.display = 'none';
+}
+
+function updateMarketTable(data) {
+    const tbody = document.getElementById('marketTableBody');
+    if (!tbody) return;
+    
+    tbody.innerHTML = '';
+    
+    data.forEach(item => {
+        const row = document.createElement('tr');
+        row.setAttribute('data-symbol', item.symbol);
+        
+        // Manejar precios que pueden ser "#N/A" o inválidos
+        let priceDisplay = '';
+        if (item.price === '#N/A' || item.price === 'N/A') {
+            priceDisplay = '<span class="text-muted">N/A</span>';
+        } else {
+            const numericPrice = parseFloat(item.price);
+            if (!isNaN(numericPrice)) {
+                priceDisplay = `<span class="price-value">$${numericPrice.toFixed(2)}</span>`;
+            } else {
+                priceDisplay = `<span class="text-warning">${item.price}</span>`;
+            }
+        }
+        
+        row.innerHTML = `
+            <td><strong>${item.symbol.toUpperCase()}</strong></td>
+            <td class="price-cell">${priceDisplay}</td>
+            <td class="text-center">
+                <button class="btn btn-sm btn-outline-info" onclick="showDetails('${item.symbol}')">
+                    <i class="fas fa-info-circle me-1"></i>Detalles
+                </button>
+            </td>
+        `;
+        
+        tbody.appendChild(row);
+    });
+}
+
+function showDetails(symbol) {
+    const item = window.MARKET_DATA.find(d => d.symbol === symbol);
+    if (!item) return;
+    
+    const modalBody = document.getElementById('modalBody');
+    if (!modalBody) return;
+    
+    modalBody.innerHTML = `
+        <div class="row">
+            <div class="col-6">
+                <strong>Símbolo:</strong><br>
+                <span class="fs-4">${item.symbol.toUpperCase()}</span>
+            </div>
+            <div class="col-6">
+                <strong>Precio:</strong><br>
+                <span class="fs-4 text-primary">$${parseFloat(item.price).toFixed(2)}</span>
+            </div>
+        </div>
+        <hr>
+        <div class="row">
+            <div class="col-12">
+                <strong>Datos originales:</strong><br>
+                <pre class="bg-light p-2 rounded">${JSON.stringify(item.raw_data, null, 2)}</pre>
+            </div>
+        </div>
+    `;
+    
+    const modal = new bootstrap.Modal(document.getElementById('detailsModal'));
+    modal.show();
+}
+
+function updateTimestamp() {
+    const timestampElement = document.getElementById('lastUpdated');
+    if (timestampElement) {
+        const now = new Date();
+        timestampElement.textContent = `Última actualización: ${now.toLocaleDateString()} ${now.toLocaleTimeString()}`;
+    }
+}
+
+function showToast(message, type = 'info') {
+    // Crear toast dinámicamente
+    const toastHtml = `
+        <div class="toast align-items-center text-white bg-${type === 'success' ? 'success' : 'danger'} border-0" role="alert">
+            <div class="d-flex">
+                <div class="toast-body">
+                    <i class="fas fa-${type === 'success' ? 'check-circle' : 'exclamation-circle'} me-2"></i>
+                    ${message}
+                </div>
+                <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+            </div>
+        </div>
+    `;
+    
+    // Agregar al DOM
+    let toastContainer = document.getElementById('toastContainer');
+    if (!toastContainer) {
+        toastContainer = document.createElement('div');
+        toastContainer.id = 'toastContainer';
+        toastContainer.className = 'position-fixed top-0 end-0 p-3';
+        toastContainer.style.zIndex = '1055';
+        document.body.appendChild(toastContainer);
+    }
+    
+    toastContainer.insertAdjacentHTML('beforeend', toastHtml);
+    
+    // Mostrar toast
+    const toastElement = toastContainer.lastElementChild;
+    const toast = new bootstrap.Toast(toastElement);
+    toast.show();
+    
+    // Limpiar después de mostrar
+    toastElement.addEventListener('hidden.bs.toast', () => {
+        toastElement.remove();
+    });
+}
+
+function saveSnapshot() {
+    console.log('💾 Guardando snapshot en base de datos...');
+    
+    const saveButton = document.querySelector('button[onclick="saveSnapshot()"]');
+    if (saveButton) {
+        saveButton.disabled = true;
+        saveButton.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Guardando...';
+    }
+    
+    fetch('/api/market-data/save-snapshot', {
+        method: 'POST'
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            showToast(`Snapshot guardado: ${data.stats.created} nuevos, ${data.stats.updated} actualizados`, 'success');
+        } else {
+            throw new Error(data.error || 'Error desconocido');
+        }
+    })
+    .catch(error => {
+        console.error('❌ Error guardando snapshot:', error);
+        showToast('Error guardando snapshot', 'error');
+    })
+    .finally(() => {
+        if (saveButton) {
+            saveButton.disabled = false;
+            saveButton.innerHTML = '<i class="fas fa-save me-2"></i>Guardar Snapshot';
+        }
+    });
+}
+
+function forceUpdate() {
+    console.log('🤖 Forzando actualización automática...');
+    
+    const forceButton = document.querySelector('button[onclick="forceUpdate()"]');
+    if (forceButton) {
+        forceButton.disabled = true;
+        forceButton.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Forzando...';
+    }
+    
+    fetch('/api/market-data/force-update', {
+        method: 'POST'
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            showToast('Actualización automática iniciada en background', 'success');
+        } else {
+            throw new Error(data.error || 'Error desconocido');
+        }
+    })
+    .catch(error => {
+        console.error('❌ Error forzando actualización:', error);
+        showToast('Error forzando actualización automática', 'error');
+    })
+    .finally(() => {
+        if (forceButton) {
+            forceButton.disabled = false;
+            forceButton.innerHTML = '<i class="fas fa-robot me-2"></i>Forzar Automático';
+        }
+    });
+}
+
+// Actualización automática cada 30 segundos
+setInterval(() => {
+    console.log('🔄 Actualización automática de datos...');
+    refreshMarketData();
+}, 3600000);
+</script>
+{% endblock %}

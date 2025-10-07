@@ -1,0 +1,124 @@
+{% extends "base_sidebar.html" %}
+
+{% block title %}Todas las Carteras - Investment Manager{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h1><i class="fas fa-briefcase me-2"></i>Todas las Carteras</h1>
+        <p class="text-muted mb-0">Gestiona todas tus carteras de inversión por organismo</p>
+    </div>
+</div>
+
+{% if portfolios %}
+<div class="row">
+    {% for portfolio in portfolios %}
+    <div class="col-md-6 col-lg-4 mb-4">
+        <div class="card h-100 portfolio-card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="mb-0">{{ portfolio.name }}</h5>
+                <span class="badge bg-primary">{{ portfolio.organism_name }}</span>
+            </div>
+            
+            <div class="card-body">
+                {% if portfolio.description %}
+                <p class="text-muted small mb-3">{{ portfolio.description }}</p>
+                {% endif %}
+                
+                <div class="row mb-3">
+                    <div class="col-6">
+                        <div class="text-center">
+                            <div class="fw-bold text-primary">{{ portfolio.positions_count or 0 }}</div>
+                            <small class="text-muted">Posiciones</small>
+                        </div>
+                    </div>
+                    <div class="col-6">
+                        <div class="text-center">
+                            <div class="fw-bold text-success">${{ portfolio.current_value or 0 | currency }}</div>
+                            <small class="text-muted">Valor Actual</small>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="text-muted small">
+                    <i class="fas fa-calendar me-1"></i>
+                    Creada {{ portfolio.created_at | time_ago if portfolio.created_at else 'Recientemente' }}
+                </div>
+            </div>
+            
+            <div class="card-footer">
+                <div class="d-grid gap-2">
+                    <a href="{{ url_for('portfolio_detail', portfolio_id=portfolio.id) }}" 
+                       class="btn btn-outline-primary btn-sm">
+                        <i class="fas fa-eye me-1"></i>Ver Detalles
+                    </a>
+                    <a href="{{ url_for('portfolios_page', organism_id=portfolio.organism_id) }}" 
+                       class="btn btn-info btn-sm">
+                        <i class="fas fa-building me-1"></i>Ver Organismo
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+
+<!-- Resumen por Organismo -->
+{% if organisms %}
+<div class="mt-5">
+    <h3>Resumen por Organismo</h3>
+    <div class="row">
+        {% for organism in organisms %}
+        <div class="col-md-6 col-lg-4 mb-3">
+            <div class="card organism-summary">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h6 class="card-title mb-1">{{ organism.name }}</h6>
+                            <small class="text-muted">
+                                {% set org_portfolios = portfolios | selectattr('organism_id', 'equalto', organism.id) | list %}
+                                {{ org_portfolios | length }} cartera{% if org_portfolios | length != 1 %}s{% endif %}
+                            </small>
+                        </div>
+                        <div class="text-end">
+                            <a href="{{ url_for('portfolios_page', organism_id=organism.id) }}" 
+                               class="btn btn-sm btn-outline-primary">
+                                <i class="fas fa-arrow-right"></i>
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+{% endif %}
+
+{% else %}
+<div class="text-center py-5">
+    <div class="mb-4">
+        <i class="fas fa-briefcase fa-5x text-muted"></i>
+    </div>
+    <h3 class="text-muted">No tienes carteras registradas</h3>
+    <p class="text-muted">Las carteras te ayudan a gestionar tus posiciones de inversión por organismo.</p>
+    {% if organisms %}
+        <div class="mt-4">
+            <h5>Crea tu primera cartera en un organismo:</h5>
+            <div class="d-flex flex-wrap justify-content-center gap-2 mt-3">
+                {% for organism in organisms[:3] %}
+                <a href="{{ url_for('portfolios_page', organism_id=organism.id) }}" 
+                   class="btn btn-outline-primary">
+                    <i class="fas fa-plus me-1"></i>{{ organism.name }}
+                </a>
+                {% endfor %}
+            </div>
+        </div>
+    {% else %}
+        <a href="{{ url_for('create_organism') }}" class="btn btn-primary btn-lg">
+            <i class="fas fa-plus me-2"></i>Crear Primer Organismo
+        </a>
+    {% endif %}
+</div>
+{% endif %}
+{% endblock %}

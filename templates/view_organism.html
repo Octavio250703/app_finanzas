@@ -1,0 +1,771 @@
+{% extends "base_sidebar.html" %}
+
+{% block title %}{{ organism.name }} - Investment Manager{% endblock %}
+
+{% block extra_head %}
+<style>
+    .organism-header {
+        background: linear-gradient(135deg, #fff, #f8f9fa);
+        padding: 2rem;
+        border-radius: 0.75rem;
+        margin-bottom: 2rem;
+        border-left: 4px solid var(--primary-color);
+    }
+    
+    .metric-card {
+        background: white;
+        border-radius: 0.75rem;
+        padding: 1.5rem;
+        text-align: center;
+        border: 1px solid #dee2e6;
+        transition: all 0.3s ease;
+    }
+    
+    .metric-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    }
+    
+    .metric-value {
+        font-size: 1.8rem;
+        font-weight: bold;
+        color: var(--primary-color);
+    }
+    
+    .metric-label {
+        color: #6c757d;
+        font-size: 0.9rem;
+        margin-top: 0.5rem;
+    }
+    
+    .rating-section {
+        background: white;
+        border-radius: 0.75rem;
+        padding: 1.5rem;
+        border: 1px solid #dee2e6;
+    }
+    
+    .chart-container {
+        background: white;
+        border-radius: 0.75rem;
+        padding: 1.5rem;
+        border: 1px solid #dee2e6;
+        margin-bottom: 2rem;
+    }
+    
+    .chart-title {
+        margin-bottom: 1rem;
+        color: #333;
+    }
+    
+    .chart-wrapper {
+        position: relative;
+        height: 300px;
+    }
+</style>
+
+<!-- PASAR DATOS DIRECTAMENTE A JAVASCRIPT -->
+<script>
+    window.ORGANISM_DATA = {
+        currencyDistribution: {{ organism.stats.currency_distribution | tojson | safe if organism.stats and organism.stats.currency_distribution else '{}' | safe }},
+        usdInvestments: {{ investments | selectattr('currency', 'equalto', 'USD') | selectattr('enabled', 'equalto', true) | list | sort(attribute='name') | tojson | safe }},
+        arsInvestments: {{ investments | selectattr('currency', 'equalto', 'ARS') | selectattr('enabled', 'equalto', true) | list | sort(attribute='name') | tojson | safe }}
+    };
+    console.log('🎯 DATOS DEL ORGANISMO CONFIGURADOS:', window.ORGANISM_DATA);
+</script>
+{% endblock %}
+
+{% block content %}
+<!-- Breadcrumb -->
+<nav aria-label="breadcrumb" class="mb-3">
+    <ol class="breadcrumb">
+        <li class="breadcrumb-item"><a href="{{ url_for('organisms') }}">Organismos</a></li>
+        <li class="breadcrumb-item active">{{ organism.name }}</li>
+    </ol>
+</nav>
+
+<!-- Header del Organismo -->
+<div class="organism-header">
+    <div class="d-flex justify-content-between align-items-start">
+        <div>
+            <h1 class="organism-title mb-2">{{ organism.name }}</h1>
+            {% if organism.full_name %}
+                <p class="organism-subtitle mb-3">{{ organism.full_name }}</p>
+            {% endif %}
+            {% if organism.description %}
+                <p class="text-muted mb-0">{{ organism.description }}</p>
+            {% endif %}
+        </div>
+        <div class="text-end">
+            <div class="btn-group mb-2">
+                <a href="{{ url_for('edit_organism', organism_id=organism.id) }}" 
+                   class="btn btn-outline-primary">
+                    <i class="fas fa-edit me-1"></i>Editar
+                </a>
+                <a href="{{ url_for('create_investment', organism_id=organism.id) }}" 
+                   class="btn btn-primary">
+                    <i class="fas fa-plus me-1"></i>Nueva Inversión
+                </a>
+                <a href="{{ url_for('portfolios_page', organism_id=organism.id) }}" 
+                   class="btn btn-info">
+                    <i class="fas fa-briefcase me-1"></i>Ver Carteras
+                </a>
+            </div>
+            {% if not organism.enabled %}
+                <div class="badge bg-warning">Inhabilitado</div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<!-- Métricas Financieras -->
+{% if organism.stats %}
+<div class="row mb-4">
+    <div class="col-md-3">
+        <div class="metric-card">
+            <div class="metric-value">{{ organism.stats.total_amount_usd | currency('USD') }}</div>
+            <div class="metric-label">Monto Activo (USD)</div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="metric-card">
+            <div class="metric-value text-success">+{{ organism.stats.estimated_return_usd | currency('USD') }}</div>
+            <div class="metric-label">Rentabilidad Estimada (USD)</div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="metric-card">
+            <div class="metric-value">{{ organism.stats.total_amount_ars | currency('ARS') }}</div>
+            <div class="metric-label">Monto Activo (ARS)</div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="metric-card">
+            <div class="metric-value text-success">+{{ organism.stats.estimated_return_ars | currency('ARS') }}</div>
+            <div class="metric-label">Rentabilidad Estimada (ARS)</div>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<div class="row">
+    <!-- Columna Principal -->
+    <div class="col-lg-8">
+        <!-- Sección de Carteras -->
+        <div class="card mb-4">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="mb-0"><i class="fas fa-briefcase me-2"></i>Carteras de este Organismo</h5>
+                <a href="{{ url_for('portfolios_page', organism_id=organism.id) }}" 
+                   class="btn btn-info btn-sm">
+                    <i class="fas fa-briefcase me-1"></i>Gestionar Carteras
+                </a>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-4">
+                        <div class="metric-card">
+                            <div class="metric-value text-primary" id="portfolio-count">-</div>
+                            <div class="metric-label">Carteras Activas</div>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="metric-card">
+                            <div class="metric-value text-success" id="portfolio-total-value">-</div>
+                            <div class="metric-label">Valor Total Carteras</div>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="metric-card">
+                            <div class="metric-value text-info" id="portfolio-positions">-</div>
+                            <div class="metric-label">Posiciones Totales</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="mt-3 text-center">
+                    <a href="{{ url_for('portfolios_page', organism_id=organism.id) }}" 
+                       class="btn btn-primary">
+                        <i class="fas fa-plus me-2"></i>Crear Nueva Cartera
+                    </a>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Gráficos de Portafolio -->
+        {% if investments %}
+        <div class="row mb-4">
+            <div class="col-md-6">
+                <div class="chart-container">
+                    <h5 class="chart-title">Portafolio de Inversiones Activas (USD)</h5>
+                    <div class="chart-wrapper">
+                        <canvas id="portfolioUSDChart"></canvas>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="chart-container">
+                    <h5 class="chart-title">Portafolio de Inversiones Activas (ARS)</h5>
+                    <div class="chart-wrapper">
+                        <canvas id="portfolioARSChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+        
+        <!-- Distribución por Moneda -->
+        {% if organism.stats and organism.stats.currency_distribution %}
+        <div class="row mb-4">
+            <div class="col-md-6">
+                <div class="chart-container">
+                    <h5 class="chart-title">Distribución por Moneda (Activas)</h5>
+                    <div class="chart-wrapper">
+                        <canvas id="currencyDistributionChart"></canvas>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="metric-card">
+                    <div class="metric-value">{{ organism.stats.total_investments }}</div>
+                    <div class="metric-label">Total Inversiones Activas</div>
+                    
+                    <div class="mt-3">
+                        <div class="d-flex justify-content-between">
+                            <span class="small">USD:</span>
+                            <span class="fw-bold">{{ organism.stats.currency_percentages.USD }}%</span>
+                        </div>
+                        <div class="d-flex justify-content-between">
+                            <span class="small">ARS:</span>
+                            <span class="fw-bold">{{ organism.stats.currency_percentages.ARS }}%</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+        
+        <!-- Lista de Inversiones -->
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="mb-0"><i class="fas fa-chart-line me-2"></i>Inversiones en este Organismo</h5>
+                <a href="{{ url_for('create_investment', organism_id=organism.id) }}" 
+                   class="btn btn-primary btn-sm">
+                    <i class="fas fa-plus me-1"></i>Nueva Inversión
+                </a>
+            </div>
+            <div class="card-body">
+                {% if investments %}
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th>Nombre</th>
+                                <th>Tipo</th>
+                                <th>Estado</th>
+                                <th>Monto</th>
+                                <th>Rendimiento</th>
+                                <th>Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for investment in investments %}
+                            <tr class="{% if not investment.enabled %}table-secondary{% endif %}">
+                                <td>
+                                    <a href="{{ url_for('view_investment', investment_id=investment.id) }}" 
+                                       class="text-decoration-none">
+                                        {{ investment.name }}
+                                    </a>
+                                    {% if not investment.enabled %}
+                                        <span class="badge bg-secondary ms-1">Inhabilitada</span>
+                                    {% endif %}
+                                </td>
+                                <td>{{ investment.investment_type }}</td>
+                                <td>
+                                    {% if investment.status == 'activa' %}
+                                        <span class="badge badge-status-active">{{ investment.status | title }}</span>
+                                    {% elif investment.status == 'en estudio' %}
+                                        <span class="badge badge-status-study">{{ investment.status | title }}</span>
+                                    {% else %}
+                                        <span class="badge badge-status-closed">{{ investment.status | title }}</span>
+                                    {% endif %}
+                                </td>
+                                <td>{{ investment.amount | currency(investment.currency) }}</td>
+                                <td>
+                                    {% if investment.annual_rate and investment.end_date %}
+                                        <span class="text-success">
+                                            {{ investment.annual_rate }}% anual
+                                        </span>
+                                    {% else %}
+                                        <span class="text-muted">N/A</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    <div class="btn-group btn-group-sm">
+                                        <a href="{{ url_for('view_investment', investment_id=investment.id) }}" 
+                                           class="btn btn-outline-primary">
+                                            <i class="fas fa-eye"></i>
+                                        </a>
+                                        <a href="{{ url_for('edit_investment', investment_id=investment.id) }}" 
+                                           class="btn btn-outline-secondary">
+                                            <i class="fas fa-edit"></i>
+                                        </a>
+                                    </div>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <div class="text-center py-4">
+                    <i class="fas fa-chart-line fa-3x text-muted mb-3"></i>
+                    <h5 class="text-muted">No hay inversiones registradas</h5>
+                    <p class="text-muted">Crea tu primera inversión en este organismo.</p>
+                    <a href="{{ url_for('create_investment', organism_id=organism.id) }}" 
+                       class="btn btn-primary">
+                        <i class="fas fa-plus me-2"></i>Crear Inversión
+                    </a>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    
+    <!-- Columna Lateral -->
+    <div class="col-lg-4">
+        <!-- Calificaciones del Organismo -->
+        <div class="rating-section mb-4">
+            <h5 class="mb-3"><i class="fas fa-star me-2"></i>Calificaciones del Organismo</h5>
+            
+            {% if avg_ratings %}
+            <div class="mb-3">
+                <h6>Calificación promedio basada en {{ avg_ratings.total_votes }} voto{% if avg_ratings.total_votes != 1 %}s{% endif %}</h6>
+                
+                <div class="rating-item">
+                    <span class="rating-label">Nivel de Riesgo:</span>
+                    <div>
+                        <span class="rating-stars">{{ avg_ratings.risk_level | stars }}</span>
+                        <span class="rating-value">{{ avg_ratings.risk_level }}</span>
+                    </div>
+                </div>
+                
+                <div class="rating-item">
+                    <span class="rating-label">Potencial de Rentabilidad:</span>
+                    <div>
+                        <span class="rating-stars">{{ avg_ratings.profitability_potential | stars }}</span>
+                        <span class="rating-value">{{ avg_ratings.profitability_potential }}</span>
+                    </div>
+                </div>
+                
+                <div class="rating-item">
+                    <span class="rating-label">Agilidad y Burocracia:</span>
+                    <div>
+                        <span class="rating-stars">{{ avg_ratings.agility_bureaucracy | stars }}</span>
+                        <span class="rating-value">{{ avg_ratings.agility_bureaucracy }}</span>
+                    </div>
+                </div>
+                
+                <div class="rating-item">
+                    <span class="rating-label">Transparencia:</span>
+                    <div>
+                        <span class="rating-stars">{{ avg_ratings.transparency | stars }}</span>
+                        <span class="rating-value">{{ avg_ratings.transparency }}</span>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+            
+            <!-- Tu Calificación -->
+            <div class="mt-4">
+                <h6>Tu Calificación</h6>
+                <form action="{{ url_for('rate_organism', organism_id=organism.id) }}" 
+                      method="POST" 
+                      class="rating-form" 
+                      data-organism-id="{{ organism.id }}">
+                    
+                    <div class="mb-3">
+                        <label class="form-label small">Nivel de Riesgo:</label>
+                        <div class="star-rating">
+                            {% for i in range(5, 0, -1) %}
+                            <input type="radio" name="risk_level" value="{{ i }}" id="risk_{{ i }}"
+                                   {% if user_rating and user_rating.risk_level == i %}checked{% endif %}>
+                            <label for="risk_{{ i }}" data-value="{{ i }}">★</label>
+                            {% endfor %}
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label small">Potencial de Rentabilidad:</label>
+                        <div class="star-rating">
+                            {% for i in range(5, 0, -1) %}
+                            <input type="radio" name="profitability_potential" value="{{ i }}" id="profit_{{ i }}"
+                                   {% if user_rating and user_rating.profitability_potential == i %}checked{% endif %}>
+                            <label for="profit_{{ i }}" data-value="{{ i }}">★</label>
+                            {% endfor %}
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label small">Agilidad y Burocracia:</label>
+                        <div class="star-rating">
+                            {% for i in range(5, 0, -1) %}
+                            <input type="radio" name="agility_bureaucracy" value="{{ i }}" id="agility_{{ i }}"
+                                   {% if user_rating and user_rating.agility_bureaucracy == i %}checked{% endif %}>
+                            <label for="agility_{{ i }}" data-value="{{ i }}">★</label>
+                            {% endfor %}
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label small">Transparencia:</label>
+                        <div class="star-rating">
+                            {% for i in range(5, 0, -1) %}
+                            <input type="radio" name="transparency" value="{{ i }}" id="transparency_{{ i }}"
+                                   {% if user_rating and user_rating.transparency == i %}checked{% endif %}>
+                            <label for="transparency_{{ i }}" data-value="{{ i }}">★</label>
+                            {% endfor %}
+                        </div>
+                    </div>
+                    
+                    <button type="submit" class="btn btn-primary btn-sm w-100">
+                        Guardar Calificación
+                    </button>
+                </form>
+            </div>
+        </div>
+        
+        <!-- Chat del Organismo -->
+        <div class="chat-container">
+            <div class="chat-header">
+                <i class="fas fa-comments me-2"></i>Discusión del Organismo
+            </div>
+            
+            <div class="chat-messages organism-chat-messages">
+                {% if messages %}
+                    {% for message in messages %}
+                    <div class="chat-message">
+                        <div class="chat-message-author">{{ user_email }}</div>
+                        <div class="chat-message-time">{{ message.created_at | datetime_format }}</div>
+                        <div class="chat-message-content">{{ message.message }}</div>
+                    </div>
+                    {% endfor %}
+                {% else %}
+                    <div class="no-messages">
+                        No hay comentarios sobre este organismo aún.
+                    </div>
+                {% endif %}
+            </div>
+            
+            <div class="chat-input">
+                <form action="{{ url_for('add_organism_message', organism_id=organism.id) }}" 
+                      method="POST" 
+                      class="organism-chat-form">
+                    <div class="input-group">
+                        <input type="text" 
+                               name="message" 
+                               class="form-control" 
+                               placeholder="Escriba un comentario sobre este organismo..." 
+                               required>
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-paper-plane"></i>
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+        
+        <!-- Información Adicional -->
+        {% if organism.website or organism.contact_email or organism.contact_phone or organism.address %}
+        <div class="card mt-4">
+            <div class="card-header">
+                <h6 class="mb-0"><i class="fas fa-info-circle me-2"></i>Información de Contacto</h6>
+            </div>
+            <div class="card-body">
+                {% if organism.website %}
+                <div class="mb-2">
+                    <small class="text-muted">Sitio Web:</small>
+                    <br><a href="{{ organism.website }}" target="_blank" class="text-decoration-none">
+                        {{ organism.website }} <i class="fas fa-external-link-alt fa-xs"></i>
+                    </a>
+                </div>
+                {% endif %}
+                
+                {% if organism.contact_email %}
+                <div class="mb-2">
+                    <small class="text-muted">Email:</small>
+                    <br><a href="mailto:{{ organism.contact_email }}" class="text-decoration-none">
+                        {{ organism.contact_email }}
+                    </a>
+                </div>
+                {% endif %}
+                
+                {% if organism.contact_phone %}
+                <div class="mb-2">
+                    <small class="text-muted">Teléfono:</small>
+                    <br><a href="tel:{{ organism.contact_phone }}" class="text-decoration-none">
+                        {{ organism.contact_phone }}
+                    </a>
+                </div>
+                {% endif %}
+                
+                {% if organism.address %}
+                <div class="mb-2">
+                    <small class="text-muted">Dirección:</small>
+                    <br>{{ organism.address }}
+                </div>
+                {% endif %}
+                
+                <div class="text-muted small mt-3">
+                    <i class="fas fa-calendar me-1"></i>
+                    Creado {{ organism.created_at | time_ago }}
+                </div>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+console.log('🎯 ORGANISMO - USANDO window.ORGANISM_DATA');
+
+document.addEventListener('DOMContentLoaded', function() {
+    console.log('✅ DOM Content Loaded - Organismo');
+    
+    // Verificar datos globales
+    if (!window.ORGANISM_DATA) {
+        console.error('❌ window.ORGANISM_DATA no está definido');
+        return;
+    }
+    
+    console.log('✅ Datos del organismo encontrados:', window.ORGANISM_DATA);
+    
+    // Verificar si Chart.js está cargado
+    if (typeof Chart === 'undefined') {
+        console.error('❌ Chart.js NO está cargado');
+        return;
+    }
+    
+    console.log('✅ Chart.js está cargado. Versión:', Chart.version);
+    
+    // Inicializar gráficos específicos del organismo
+    initOrganismCharts();
+    
+    // Cargar estadísticas de carteras
+    loadPortfolioStats();
+});
+
+// Cargar estadísticas de carteras
+async function loadPortfolioStats() {
+    try {
+        const response = await fetch(`/api/portfolios?organism_id={{ organism.id }}`);
+        const data = await response.json();
+        
+        if (data.success) {
+            const portfolios = data.portfolios;
+            const totalValue = portfolios.reduce((sum, p) => sum + (p.current_value || 0), 0);
+            const totalPositions = portfolios.reduce((sum, p) => sum + (p.positions_count || 0), 0);
+            
+            document.getElementById('portfolio-count').textContent = portfolios.length;
+            document.getElementById('portfolio-total-value').textContent = `$${totalValue.toLocaleString()}`;
+            document.getElementById('portfolio-positions').textContent = totalPositions;
+        } else {
+            // Si no hay datos o hay error, mostrar valores por defecto
+            document.getElementById('portfolio-count').textContent = '0';
+            document.getElementById('portfolio-total-value').textContent = '$0';
+            document.getElementById('portfolio-positions').textContent = '0';
+        }
+    } catch (error) {
+        console.error('Error loading portfolio stats:', error);
+        // Mostrar valores por defecto en caso de error
+        document.getElementById('portfolio-count').textContent = '0';
+        document.getElementById('portfolio-total-value').textContent = '$0';
+        document.getElementById('portfolio-positions').textContent = '0';
+    }
+}
+
+function initOrganismCharts() {
+    console.log('🎨 INICIANDO GRÁFICOS DEL ORGANISMO');
+    
+    // Gráfico de distribución por moneda
+    const currencyCanvas = document.getElementById('currencyDistributionChart');
+    if (currencyCanvas && window.ORGANISM_DATA.currencyDistribution) {
+        console.log('✅ Creando gráfico de distribución por moneda');
+        
+        const existingChart = Chart.getChart(currencyCanvas);
+        if (existingChart) {
+            existingChart.destroy();
+        }
+        
+        try {
+            const currencyData = window.ORGANISM_DATA.currencyDistribution;
+            console.log('📊 Currency Data:', currencyData);
+            
+            new Chart(currencyCanvas, {
+                type: 'doughnut',
+                data: {
+                    labels: Object.keys(currencyData),
+                    datasets: [{
+                        data: Object.values(currencyData),
+                        backgroundColor: ['#007bff', '#28a745', '#ffc107', '#dc3545'],
+                        borderWidth: 2,
+                        borderColor: '#fff'
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'bottom',
+                            labels: {
+                                padding: 20,
+                                usePointStyle: true
+                            }
+                        },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    const value = context.parsed;
+                                    const label = context.label;
+                                    return `${label}: $${value.toLocaleString()}`;
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+            console.log('🎉 Gráfico de distribución por moneda creado exitosamente');
+        } catch (error) {
+            console.error('❌ Error creando gráfico de distribución por moneda:', error);
+        }
+    }
+    
+    // Gráfico de portafolio USD
+    const usdChartCanvas = document.getElementById('portfolioUSDChart');
+    if (usdChartCanvas && window.ORGANISM_DATA.usdInvestments) {
+        console.log('✅ Creando gráfico de portafolio USD');
+        
+        const existingUsdChart = Chart.getChart(usdChartCanvas);
+        if (existingUsdChart) {
+            existingUsdChart.destroy();
+        }
+        
+        try {
+            const usdData = window.ORGANISM_DATA.usdInvestments;
+            console.log('📊 USD Data:', usdData);
+            
+            if (usdData.length > 0) {
+                new Chart(usdChartCanvas, {
+                    type: 'doughnut',
+                    data: {
+                        labels: usdData.map(inv => inv.name),
+                        datasets: [{
+                            data: usdData.map(inv => inv.amount),
+                            backgroundColor: [
+                                '#FF6384', '#36A2EB', '#FFCE56', '#4BC0C0', 
+                                '#9966FF', '#FF9F40', '#FF6384', '#C9CBCF'
+                            ],
+                            borderWidth: 2,
+                            borderColor: '#fff'
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: {
+                                position: 'bottom',
+                                labels: {
+                                    padding: 20,
+                                    usePointStyle: true
+                                }
+                            },
+                            tooltip: {
+                                callbacks: {
+                                    label: function(context) {
+                                        const value = context.parsed;
+                                        const total = usdData.reduce((a, b) => a + b.amount, 0);
+                                        const percentage = ((value / total) * 100).toFixed(1);
+                                        return `${context.label}: USD $${value.toLocaleString()} (${percentage}%)`;
+                                    }
+                                }
+                            }
+                        }
+                    }
+                });
+                console.log('🎉 Gráfico de portafolio USD creado exitosamente');
+            } else {
+                console.log('⚠️ No hay inversiones USD para mostrar');
+            }
+        } catch (error) {
+            console.error('❌ Error creando gráfico de portafolio USD:', error);
+        }
+    }
+    
+    // Gráfico de portafolio ARS
+    const arsChartCanvas = document.getElementById('portfolioARSChart');
+    if (arsChartCanvas && window.ORGANISM_DATA.arsInvestments) {
+        console.log('✅ Creando gráfico de portafolio ARS');
+        
+        const existingArsChart = Chart.getChart(arsChartCanvas);
+        if (existingArsChart) {
+            existingArsChart.destroy();
+        }
+        
+        try {
+            const arsData = window.ORGANISM_DATA.arsInvestments;
+            console.log('📊 ARS Data:', arsData);
+            
+            if (arsData.length > 0) {
+                new Chart(arsChartCanvas, {
+                    type: 'doughnut',
+                    data: {
+                        labels: arsData.map(inv => inv.name),
+                        datasets: [{
+                            data: arsData.map(inv => inv.amount),
+                            backgroundColor: [
+                                '#FF6384', '#36A2EB', '#FFCE56', '#4BC0C0', 
+                                '#9966FF', '#FF9F40', '#FF6384', '#C9CBCF'
+                            ],
+                            borderWidth: 2,
+                            borderColor: '#fff'
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: {
+                                position: 'bottom',
+                                labels: {
+                                    padding: 20,
+                                    usePointStyle: true
+                                }
+                            },
+                            tooltip: {
+                                callbacks: {
+                                    label: function(context) {
+                                        const value = context.parsed;
+                                        const total = arsData.reduce((a, b) => a + b.amount, 0);
+                                        const percentage = ((value / total) * 100).toFixed(1);
+                                        return `${context.label}: ARS $${value.toLocaleString()} (${percentage}%)`;
+                                    }
+                                }
+                            }
+                        }
+                    }
+                });
+                console.log('🎉 Gráfico de portafolio ARS creado exitosamente');
+            } else {
+                console.log('⚠️ No hay inversiones ARS para mostrar');
+            }
+        } catch (error) {
+            console.error('❌ Error creando gráfico de portafolio ARS:', error);
+        }
+    }
+    
+    console.log('🏁 Gráficos del organismo completados');
+}
+</script>
+{% endblock %}

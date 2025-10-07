@@ -1,0 +1,415 @@
+{% extends "base_sidebar.html" %}
+
+{% block title %}Carteras - {{ organism.name }}{% endblock %}
+
+{% block extra_head %}
+<style>
+    .portfolio-card {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        border-radius: 15px;
+        color: white;
+        transition: transform 0.3s ease, box-shadow 0.3s ease;
+        cursor: pointer;
+        border: none;
+        overflow: hidden;
+        position: relative;
+    }
+    
+    .portfolio-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 15px 35px rgba(0,0,0,0.1);
+    }
+    
+    .portfolio-card::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: linear-gradient(45deg, rgba(255,255,255,0.1) 0%, transparent 100%);
+        pointer-events: none;
+    }
+    
+    .portfolio-stats {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+        gap: 1rem;
+    }
+    
+    .stat-value {
+        font-size: 1.5rem;
+        font-weight: bold;
+        margin-bottom: 0.25rem;
+    }
+    
+    .stat-label {
+        font-size: 0.85rem;
+        opacity: 0.9;
+    }
+    
+    .portfolio-actions {
+        position: absolute;
+        top: 15px;
+        right: 15px;
+    }
+    
+    .btn-portfolio-action {
+        background: rgba(255,255,255,0.2);
+        border: 1px solid rgba(255,255,255,0.3);
+        color: white;
+        padding: 0.25rem 0.5rem;
+        margin-left: 0.25rem;
+        border-radius: 5px;
+        font-size: 0.8rem;
+    }
+    
+    .btn-portfolio-action:hover {
+        background: rgba(255,255,255,0.3);
+        color: white;
+    }
+    
+    .empty-state {
+        text-align: center;
+        padding: 4rem 2rem;
+        color: #6c757d;
+    }
+    
+    .create-portfolio-card {
+        border: 2px dashed #dee2e6;
+        background: #f8f9fa;
+        border-radius: 15px;
+        transition: all 0.3s ease;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        min-height: 200px;
+    }
+    
+    .create-portfolio-card:hover {
+        border-color: #007bff;
+        background: #e3f2fd;
+        transform: translateY(-2px);
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Header -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h1 class="h3 mb-0">
+                <i class="fas fa-briefcase me-2 text-primary"></i>
+                Carteras de {{ organism.name }}
+            </h1>
+            <p class="text-muted mb-0">Gestiona las carteras de inversión del organismo</p>
+        </div>
+        <div>
+            <button class="btn btn-primary me-2" onclick="showCreatePortfolioModal()">
+                <i class="fas fa-plus me-2"></i>Nueva Cartera
+            </button>
+            <a href="{{ url_for('organisms') }}" class="btn btn-outline-secondary">
+                <i class="fas fa-arrow-left me-2"></i>Volver a Organismos
+            </a>
+        </div>
+    </div>
+
+    <!-- Lista de carteras -->
+    <div class="row" id="portfoliosContainer">
+        {% if portfolios %}
+            {% for portfolio in portfolios %}
+            <div class="col-lg-6 col-xl-4 mb-4">
+                <div class="card portfolio-card" onclick="viewPortfolio({{ portfolio.id }})">
+                    <div class="portfolio-actions">
+                        <button class="btn btn-portfolio-action" onclick="event.stopPropagation(); editPortfolio({{ portfolio.id }})" title="Editar">
+                            <i class="fas fa-edit"></i>
+                        </button>
+                        <button class="btn btn-portfolio-action" onclick="event.stopPropagation(); deletePortfolio({{ portfolio.id }})" title="Eliminar">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    </div>
+                    
+                    <div class="card-body">
+                        <h5 class="card-title mb-3">
+                            <i class="fas fa-chart-pie me-2"></i>
+                            {{ portfolio.name }}
+                        </h5>
+                        
+                        {% if portfolio.description %}
+                        <p class="card-text opacity-75 mb-3">{{ portfolio.description }}</p>
+                        {% endif %}
+                        
+                        <div class="portfolio-stats">
+                            <div>
+                                <div class="stat-value" id="value-{{ portfolio.id }}">$0</div>
+                                <div class="stat-label">Valor Actual</div>
+                            </div>
+                            <div>
+                                <div class="stat-value" id="positions-{{ portfolio.id }}">0</div>
+                                <div class="stat-label">Posiciones</div>
+                            </div>
+                            <div>
+                                <div class="stat-value" id="profit-{{ portfolio.id }}">0%</div>
+                                <div class="stat-label">Ganancia</div>
+                            </div>
+                        </div>
+                        
+                        <div class="mt-3 pt-3" style="border-top: 1px solid rgba(255,255,255,0.2);">
+                            <small class="opacity-75">
+                                <i class="fas fa-clock me-1"></i>
+                                Creada: {{ portfolio.created_at|date_format }}
+                            </small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+            
+            <!-- Tarjeta para crear nueva cartera -->
+            <div class="col-lg-6 col-xl-4 mb-4">
+                <div class="create-portfolio-card" onclick="showCreatePortfolioModal()">
+                    <div class="text-center">
+                        <i class="fas fa-plus fa-3x text-muted mb-3"></i>
+                        <h5 class="text-muted">Crear Nueva Cartera</h5>
+                        <p class="text-muted small">Agrega una nueva cartera de inversión</p>
+                    </div>
+                </div>
+            </div>
+        {% else %}
+            <!-- Estado vacío -->
+            <div class="col-12">
+                <div class="empty-state">
+                    <i class="fas fa-briefcase fa-5x text-muted mb-4"></i>
+                    <h3>No hay carteras creadas</h3>
+                    <p class="mb-4">Comienza creando tu primera cartera de inversión para {{ organism.name }}</p>
+                    <button class="btn btn-primary btn-lg" onclick="showCreatePortfolioModal()">
+                        <i class="fas fa-plus me-2"></i>Crear Primera Cartera
+                    </button>
+                </div>
+            </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Modal para crear/editar cartera -->
+<div class="modal fade" id="portfolioModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="portfolioModalTitle">
+                    <i class="fas fa-briefcase me-2"></i>Nueva Cartera
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="portfolioForm">
+                    <input type="hidden" id="portfolioId" value="">
+                    <input type="hidden" id="organismId" value="{{ organism.id }}">
+                    
+                    <div class="mb-3">
+                        <label for="portfolioName" class="form-label">Nombre de la Cartera *</label>
+                        <input type="text" class="form-control" id="portfolioName" required 
+                               placeholder="Ej: Cartera Conservadora, Bonos 2024">
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="portfolioDescription" class="form-label">Descripción</label>
+                        <textarea class="form-control" id="portfolioDescription" rows="3" 
+                                  placeholder="Descripción opcional de la estrategia o características de la cartera"></textarea>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <button type="button" class="btn btn-primary" onclick="savePortfolio()">
+                    <i class="fas fa-save me-2"></i>Guardar Cartera
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Toast container -->
+<div id="toastContainer" class="position-fixed top-0 end-0 p-3" style="z-index: 1055;"></div>
+
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Cargar valores de carteras
+    loadPortfolioValues();
+});
+
+async function loadPortfolioValues() {
+    const portfolios = {{ portfolios | tojson | safe }};
+    
+    for (const portfolio of portfolios) {
+        try {
+            const response = await fetch(`/api/portfolio/${portfolio.id}/value`);
+            const data = await response.json();
+            
+            if (data.success) {
+                const value = data.portfolio_value;
+                
+                // Actualizar elementos
+                const valueElement = document.getElementById(`value-${portfolio.id}`);
+                const positionsElement = document.getElementById(`positions-${portfolio.id}`);
+                const profitElement = document.getElementById(`profit-${portfolio.id}`);
+                
+                if (valueElement) {
+                    valueElement.textContent = `$${value.total_value.toLocaleString('es-ES', {
+                        minimumFractionDigits: 2,
+                        maximumFractionDigits: 2
+                    })}`;
+                }
+                
+                if (positionsElement) {
+                    positionsElement.textContent = value.positions_detail.length;
+                }
+                
+                if (profitElement) {
+                    const profit = value.profit_loss_percentage;
+                    profitElement.textContent = `${profit > 0 ? '+' : ''}${profit.toFixed(2)}%`;
+                    profitElement.className = `stat-value ${profit >= 0 ? 'text-success' : 'text-danger'}`;
+                }
+            }
+        } catch (error) {
+            console.error(`Error cargando valor de cartera ${portfolio.id}:`, error);
+        }
+    }
+}
+
+function showCreatePortfolioModal() {
+    document.getElementById('portfolioModalTitle').innerHTML = '<i class="fas fa-briefcase me-2"></i>Nueva Cartera';
+    document.getElementById('portfolioForm').reset();
+    document.getElementById('portfolioId').value = '';
+    
+    const modal = new bootstrap.Modal(document.getElementById('portfolioModal'));
+    modal.show();
+}
+
+function editPortfolio(portfolioId) {
+    // Obtener datos de la cartera y prellenar el modal
+    const portfolios = {{ portfolios | tojson | safe }};
+    const portfolio = portfolios.find(p => p.id === portfolioId);
+    
+    if (portfolio) {
+        document.getElementById('portfolioModalTitle').innerHTML = '<i class="fas fa-edit me-2"></i>Editar Cartera';
+        document.getElementById('portfolioId').value = portfolio.id;
+        document.getElementById('portfolioName').value = portfolio.name;
+        document.getElementById('portfolioDescription').value = portfolio.description || '';
+        
+        const modal = new bootstrap.Modal(document.getElementById('portfolioModal'));
+        modal.show();
+    }
+}
+
+async function savePortfolio() {
+    const portfolioId = document.getElementById('portfolioId').value;
+    const name = document.getElementById('portfolioName').value;
+    const description = document.getElementById('portfolioDescription').value;
+    const organismId = document.getElementById('organismId').value;
+    
+    if (!name.trim()) {
+        showToast('Por favor ingresa un nombre para la cartera', 'error');
+        return;
+    }
+    
+    try {
+        const isEdit = portfolioId !== '';
+        const url = isEdit ? `/api/portfolios/${portfolioId}` : '/api/portfolios';
+        const method = isEdit ? 'PUT' : 'POST';
+        
+        const response = await fetch(url, {
+            method: method,
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                organism_id: parseInt(organismId),
+                name: name.trim(),
+                description: description.trim()
+            })
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+            showToast(isEdit ? 'Cartera actualizada exitosamente' : 'Cartera creada exitosamente', 'success');
+            
+            // Cerrar modal
+            const modal = bootstrap.Modal.getInstance(document.getElementById('portfolioModal'));
+            modal.hide();
+            
+            // Recargar página
+            setTimeout(() => {
+                window.location.reload();
+            }, 1000);
+        } else {
+            showToast(data.error || 'Error al guardar cartera', 'error');
+        }
+    } catch (error) {
+        console.error('Error:', error);
+        showToast('Error de conexión al guardar cartera', 'error');
+    }
+}
+
+function viewPortfolio(portfolioId) {
+    window.location.href = `/portfolio/${portfolioId}`;
+}
+
+async function deletePortfolio(portfolioId) {
+    if (!confirm('¿Estás seguro de que quieres eliminar esta cartera? Esta acción no se puede deshacer.')) {
+        return;
+    }
+    
+    try {
+        const response = await fetch(`/api/portfolios/${portfolioId}`, {
+            method: 'DELETE'
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+            showToast('Cartera eliminada exitosamente', 'success');
+            setTimeout(() => {
+                window.location.reload();
+            }, 1000);
+        } else {
+            showToast(data.error || 'Error al eliminar cartera', 'error');
+        }
+    } catch (error) {
+        console.error('Error:', error);
+        showToast('Error de conexión al eliminar cartera', 'error');
+    }
+}
+
+function showToast(message, type = 'info') {
+    const toastHtml = `
+        <div class="toast align-items-center text-white bg-${type === 'success' ? 'success' : 'danger'} border-0" role="alert">
+            <div class="d-flex">
+                <div class="toast-body">
+                    <i class="fas fa-${type === 'success' ? 'check-circle' : 'exclamation-circle'} me-2"></i>
+                    ${message}
+                </div>
+                <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+            </div>
+        </div>
+    `;
+    
+    const toastContainer = document.getElementById('toastContainer');
+    toastContainer.insertAdjacentHTML('beforeend', toastHtml);
+    
+    const toastElement = toastContainer.lastElementChild;
+    const toast = new bootstrap.Toast(toastElement);
+    toast.show();
+    
+    toastElement.addEventListener('hidden.bs.toast', () => {
+        toastElement.remove();
+    });
+}
+</script>
+{% endblock %}

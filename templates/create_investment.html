@@ -1,0 +1,409 @@
+{% extends "base_sidebar.html" %}
+
+{% block title %}Nueva Inversión - Investment Manager{% endblock %}
+
+{% block content %}
+<div class="mb-4">
+    <nav aria-label="breadcrumb">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="{{ url_for('dashboard') }}">Dashboard</a></li>
+            <li class="breadcrumb-item active">Nueva Inversión</li>
+        </ol>
+    </nav>
+    
+    <h1><i class="fas fa-plus me-2"></i>Crear Nueva Inversión</h1>
+    <p class="text-muted">Registra una nueva inversión en tu portafolio</p>
+</div>
+
+<div class="row">
+    <div class="col-lg-8">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="fas fa-chart-line me-2"></i>Información de la Inversión</h5>
+            </div>
+            <div class="card-body">
+                <form method="POST" class="needs-validation" novalidate>
+                    <!-- Información Básica -->
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <label for="name" class="form-label">Nombre de la Inversión <span class="text-danger">*</span></label>
+                            <input type="text" 
+                                   class="form-control" 
+                                   id="name" 
+                                   name="name" 
+                                   required 
+                                   maxlength="200"
+                                   placeholder="Ej: Plazo Fijo 90 días">
+                            <div class="invalid-feedback">
+                                El nombre de la inversión es obligatorio.
+                            </div>
+                        </div>
+                        
+                        <div class="col-md-6">
+                            <label for="organism_id" class="form-label">Organismo <span class="text-danger">*</span></label>
+                            <select class="form-select" id="organism_id" name="organism_id" required>
+                                <option value="">Seleccionar organismo...</option>
+                                {% for organism in organisms %}
+                                <option value="{{ organism.id }}" 
+                                        {% if selected_organism_id and selected_organism_id|int == organism.id %}selected{% endif %}>
+                                    {{ organism.name }}
+                                    {% if organism.full_name and organism.full_name != organism.name %}
+                                        - {{ organism.full_name }}
+                                    {% endif %}
+                                </option>
+                                {% endfor %}
+                                <option value="">--- Crear Nuevo Organismo ---</option>
+                            </select>
+                            <div class="invalid-feedback">
+                                Debes seleccionar un organismo.
+                            </div>
+                            <div class="form-text">
+                                ¿No encuentras el organismo? 
+                                <a href="{{ url_for('create_organism') }}" target="_blank">Crear nuevo organismo</a>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="description" class="form-label">Descripción</label>
+                        <textarea class="form-control" 
+                                  id="description" 
+                                  name="description" 
+                                  rows="3"
+                                  placeholder="Describe los detalles de esta inversión..."></textarea>
+                    </div>
+
+                    <!-- Tipo y Estado -->
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <label for="investment_type" class="form-label">Tipo de Inversión <span class="text-danger">*</span></label>
+                            <select class="form-select" id="investment_type" name="investment_type" required>
+                                <option value="">Seleccionar tipo...</option>
+                                <option value="plazo fijo">Plazo Fijo</option>
+                                <option value="bonos">Bonos</option>
+                                <option value="acciones">Acciones</option>
+                                <option value="fondo comun">Fondo Común de Inversión</option>
+                                <option value="fci">FCI</option>
+                                <option value="lebac">LEBAC</option>
+                                <option value="lecap">LECAP</option>
+                                <option value="cedear">CEDEAR</option>
+                                <option value="crypto">Criptomonedas</option>
+                                <option value="otro">Otro</option>
+                            </select>
+                            <div class="invalid-feedback">
+                                El tipo de inversión es obligatorio.
+                            </div>
+                        </div>
+
+                        <div class="col-md-6">
+                            <label for="status" class="form-label">Estado <span class="text-danger">*</span></label>
+                            <select class="form-select" id="status" name="status" required>
+                                <option value="">Seleccionar estado...</option>
+                                <option value="en estudio">En Estudio</option>
+                                <option value="activa">Activa</option>
+                                <option value="cerrada">Cerrada</option>
+                            </select>
+                            <div class="invalid-feedback">
+                                El estado de la inversión es obligatorio.
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Información Financiera -->
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <label for="amount" class="form-label">Monto <span class="text-danger">*</span></label>
+                            <div class="input-group">
+                                <span class="input-group-text">$</span>
+                                <input type="number" 
+                                       class="form-control" 
+                                       id="amount" 
+                                       name="amount" 
+                                       required 
+                                       min="0" 
+                                       step="0.01"
+                                       placeholder="0.00">
+                            </div>
+                            <div class="invalid-feedback">
+                                El monto es obligatorio y debe ser mayor a 0.
+                            </div>
+                        </div>
+
+                        <div class="col-md-6">
+                            <label for="currency" class="form-label">Moneda <span class="text-danger">*</span></label>
+                            <select class="form-select" id="currency" name="currency" required>
+                                <option value="">Seleccionar moneda...</option>
+                                <option value="ARS" selected>Peso Argentino (ARS)</option>
+                                <option value="USD">Dólar Estadounidense (USD)</option>
+                                <option value="EUR">Euro (EUR)</option>
+                                <option value="BRL">Real Brasileño (BRL)</option>
+                                <option value="UYU">Peso Uruguayo (UYU)</option>
+                            </select>
+                            <div class="invalid-feedback">
+                                La moneda es obligatoria.
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Fechas -->
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <label for="start_date" class="form-label">Fecha de Inicio <span class="text-danger">*</span></label>
+                            <input type="date" 
+                                   class="form-control" 
+                                   id="start_date" 
+                                   name="start_date" 
+                                   required>
+                            <div class="invalid-feedback">
+                                La fecha de inicio es obligatoria.
+                            </div>
+                        </div>
+
+                        <div class="col-md-6">
+                            <label for="end_date" class="form-label">Fecha de Vencimiento</label>
+                            <input type="date" 
+                                   class="form-control" 
+                                   id="end_date" 
+                                   name="end_date">
+                            <div class="form-text">Opcional. Necesaria para calcular rendimientos.</div>
+                        </div>
+                    </div>
+
+                    <!-- Tasa Anual -->
+                    <div class="row mb-4">
+                        <div class="col-md-6">
+                            <label for="annual_rate" class="form-label">Tasa Anual (%)</label>
+                            <div class="input-group">
+                                <input type="number" 
+                                       class="form-control" 
+                                       id="annual_rate" 
+                                       name="annual_rate" 
+                                       min="0" 
+                                       max="100" 
+                                       step="0.01"
+                                       placeholder="0.00">
+                                <span class="input-group-text">%</span>
+                            </div>
+                            <div class="form-text">Opcional. Necesaria para calcular rendimientos estimados.</div>
+                        </div>
+                        
+                        <div class="col-md-6 d-flex align-items-end">
+                            <div id="estimatedReturn" class="w-100">
+                                <!-- Aquí se mostrará el cálculo automático -->
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Botones -->
+                    <div class="d-flex gap-2">
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-save me-2"></i>Crear Inversión
+                        </button>
+                        <a href="{{ url_for('dashboard') }}" class="btn btn-secondary">
+                            <i class="fas fa-times me-2"></i>Cancelar
+                        </a>
+                        {% if selected_organism_id %}
+                        <a href="{{ url_for('view_organism', organism_id=selected_organism_id) }}" class="btn btn-outline-primary">
+                            <i class="fas fa-building me-2"></i>Ver Organismo
+                        </a>
+                        {% endif %}
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Columna Lateral -->
+    <div class="col-lg-4">
+        <div class="card">
+            <div class="card-header">
+                <h6 class="mb-0"><i class="fas fa-info-circle me-2"></i>Guía de Inversiones</h6>
+            </div>
+            <div class="card-body">
+                <h6>Tipos de Inversión Comunes:</h6>
+                <ul class="small text-muted">
+                    <li><strong>Plazo Fijo:</strong> Depósito a término con tasa fija</li>
+                    <li><strong>Bonos:</strong> Títulos de deuda pública o privada</li>
+                    <li><strong>Acciones:</strong> Participación en empresas</li>
+                    <li><strong>FCI:</strong> Fondos Comunes de Inversión</li>
+                    <li><strong>CEDEAR:</strong> Certificados de Depósito Argentinos</li>
+                </ul>
+                
+                <h6 class="mt-3">Estados de Inversión:</h6>
+                <ul class="small text-muted">
+                    <li><strong>En Estudio:</strong> Inversión en análisis</li>
+                    <li><strong>Activa:</strong> Inversión en curso</li>
+                    <li><strong>Cerrada:</strong> Inversión finalizada</li>
+                </ul>
+                
+                <div class="alert alert-info mt-3">
+                    <small>
+                        <i class="fas fa-lightbulb me-1"></i>
+                        <strong>Tip:</strong> Completa la tasa anual y fecha de vencimiento 
+                        para ver proyecciones automáticas de rendimiento.
+                    </small>
+                </div>
+            </div>
+        </div>
+        
+        {% if organisms %}
+        <div class="card mt-3">
+            <div class="card-header">
+                <h6 class="mb-0"><i class="fas fa-building me-2"></i>Tus Organismos</h6>
+            </div>
+            <div class="card-body">
+                <div class="list-group list-group-flush">
+                    {% for organism in organisms[:5] %}
+                    <div class="list-group-item d-flex justify-content-between align-items-center">
+                        <div>
+                            <div class="fw-medium">{{ organism.name }}</div>
+                            {% if organism.stats %}
+                            <small class="text-muted">{{ organism.stats.total_investments }} inversiones</small>
+                            {% endif %}
+                        </div>
+                        <button class="btn btn-outline-primary btn-sm select-organism" 
+                                data-organism-id="{{ organism.id }}" 
+                                data-organism-name="{{ organism.name }}">
+                            Seleccionar
+                        </button>
+                    </div>
+                    {% endfor %}
+                </div>
+                
+                {% if organisms|length > 5 %}
+                <div class="text-center mt-2">
+                    <small class="text-muted">... y {{ organisms|length - 5 }} más</small>
+                </div>
+                {% endif %}
+                
+                <div class="d-grid mt-3">
+                    <a href="{{ url_for('create_organism') }}" class="btn btn-outline-success btn-sm">
+                        <i class="fas fa-plus me-1"></i>Crear Nuevo Organismo
+                    </a>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Auto-calcular rendimiento estimado
+    initReturnCalculator();
+    
+    // Selección rápida de organismos
+    initOrganismSelection();
+    
+    // Validación personalizada
+    initCustomValidation();
+    
+    // Auto-completar fechas
+    initDateDefaults();
+});
+
+function initReturnCalculator() {
+    const amountInput = document.getElementById('amount');
+    const rateInput = document.getElementById('annual_rate');
+    const startDateInput = document.getElementById('start_date');
+    const endDateInput = document.getElementById('end_date');
+    const returnDiv = document.getElementById('estimatedReturn');
+    
+    function calculateReturn() {
+        const amount = parseFloat(amountInput.value) || 0;
+        const rate = parseFloat(rateInput.value) || 0;
+        const startDate = new Date(startDateInput.value);
+        const endDate = new Date(endDateInput.value);
+        
+        if (amount > 0 && rate > 0 && startDate && endDate && endDate > startDate) {
+            const days = Math.ceil((endDate - startDate) / (1000 * 60 * 60 * 24));
+            const dailyRate = rate / 100 / 365;
+            const estimatedReturn = amount * (1 + dailyRate * days);
+            const profit = estimatedReturn - amount;
+            
+            returnDiv.innerHTML = `
+                <div class="alert alert-success">
+                    <small class="fw-bold">Rendimiento Estimado:</small><br>
+                    <span class="fw-bold">$${profit.toLocaleString('es-AR', {minimumFractionDigits: 2})}</span><br>
+                    <small class="text-muted">${days} días | ${((profit/amount)*100).toFixed(2)}% ganancia</small>
+                </div>
+            `;
+        } else {
+            returnDiv.innerHTML = '';
+        }
+    }
+    
+    [amountInput, rateInput, startDateInput, endDateInput].forEach(input => {
+        input.addEventListener('input', calculateReturn);
+        input.addEventListener('change', calculateReturn);
+    });
+}
+
+function initOrganismSelection() {
+    const selectButtons = document.querySelectorAll('.select-organism');
+    const organismSelect = document.getElementById('organism_id');
+    
+    selectButtons.forEach(button => {
+        button.addEventListener('click', function() {
+            const organismId = this.dataset.organismId;
+            const organismName = this.dataset.organismName;
+            
+            organismSelect.value = organismId;
+            showAlert(`Organismo "${organismName}" seleccionado`, 'success');
+        });
+    });
+}
+
+function initCustomValidation() {
+    const form = document.querySelector('form');
+    const endDateInput = document.getElementById('end_date');
+    const startDateInput = document.getElementById('start_date');
+    
+    // Validar que fecha fin sea mayor a fecha inicio
+    endDateInput.addEventListener('change', function() {
+        const startDate = new Date(startDateInput.value);
+        const endDate = new Date(this.value);
+        
+        if (startDate && endDate && endDate <= startDate) {
+            this.setCustomValidity('La fecha de vencimiento debe ser posterior a la fecha de inicio');
+        } else {
+            this.setCustomValidity('');
+        }
+    });
+    
+    startDateInput.addEventListener('change', function() {
+        endDateInput.dispatchEvent(new Event('change'));
+    });
+}
+
+function initDateDefaults() {
+    const startDateInput = document.getElementById('start_date');
+    
+    // Establecer fecha actual como default
+    if (!startDateInput.value) {
+        const today = new Date();
+        startDateInput.value = today.toISOString().split('T')[0];
+    }
+}
+
+// Función para mostrar alertas
+function showAlert(message, type = 'info') {
+    const alertContainer = document.querySelector('main');
+    const alertDiv = document.createElement('div');
+    alertDiv.className = `alert alert-${type} alert-dismissible fade show`;
+    alertDiv.innerHTML = `
+        ${message}
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    `;
+    
+    alertContainer.insertAdjacentElement('afterbegin', alertDiv);
+    
+    setTimeout(() => {
+        const bsAlert = new bootstrap.Alert(alertDiv);
+        bsAlert.close();
+    }, 3000);
+}
+</script>
+{% endblock %}

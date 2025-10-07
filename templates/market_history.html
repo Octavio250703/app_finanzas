@@ -1,0 +1,291 @@
+{% extends "base_sidebar.html" %}
+
+{% block title %}Histórico de Mercado{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h1 class="h3 mb-0 text-gray-800">📈 Histórico de Datos de Mercado</h1>
+                <div>
+                    <a href="{{ url_for('market_data') }}" class="btn btn-outline-primary">
+                        <i class="fas fa-arrow-left"></i> Volver a Datos en Vivo
+                    </a>
+                </div>
+            </div>
+
+             Información del último snapshot 
+            {% if last_snapshot %}
+            <div class="alert alert-info">
+                <strong>Último snapshot guardado:</strong> {{ last_snapshot|date_format }}
+            </div>
+            {% else %}
+            <div class="alert alert-warning">
+                <strong>No hay datos históricos disponibles.</strong> 
+                Ve a <a href="{{ url_for('market_data') }}">Datos de Mercado</a> y guarda un snapshot manual.
+            </div>
+            {% endif %}
+
+             Filtros de búsqueda 
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h6 class="m-0 font-weight-bold text-primary">Filtros de Búsqueda</h6>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-3">
+                            <label for="symbolFilter">Símbolo:</label>
+                            <input type="text" id="symbolFilter" class="form-control" placeholder="Ej: AAPL">
+                        </div>
+                        <div class="col-md-3">
+                            <label for="startDate">Fecha Inicio:</label>
+                            <input type="date" id="startDate" class="form-control">
+                        </div>
+                        <div class="col-md-3">
+                            <label for="endDate">Fecha Fin:</label>
+                            <input type="date" id="endDate" class="form-control">
+                        </div>
+                        <div class="col-md-3">
+                            <label>&nbsp;</label>
+                            <div>
+                                <button id="searchBtn" class="btn btn-primary">
+                                    <i class="fas fa-search"></i> Buscar
+                                </button>
+                                <button id="clearBtn" class="btn btn-secondary">
+                                    <i class="fas fa-times"></i> Limpiar
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+             Resultados 
+            <div class="card">
+                <div class="card-header">
+                    <h6 class="m-0 font-weight-bold text-primary">Datos Históricos</h6>
+                </div>
+                <div class="card-body">
+                     Estado de carga 
+                    <div id="loadingState" class="text-center py-4">
+                        <div class="spinner-border text-primary" role="status">
+                            <span class="sr-only">Cargando...</span>
+                        </div>
+                        <p class="mt-2">Cargando datos históricos...</p>
+                    </div>
+
+                     Tabla de resultados 
+                    <div id="dataTable" style="display: none;">
+                        <div class="table-responsive">
+                            <table class="table table-bordered table-hover">
+                                <thead class="thead-light">
+                                    <tr>
+                                        <th>Fecha</th>
+                                        <th>Símbolo</th>
+                                        <th>Precio</th>
+                                        <th>Última Actualización</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="historyTableBody">
+                                     Datos dinámicos 
+                                </tbody>
+                            </table>
+                        </div>
+                        
+                         Paginación 
+                        <div id="pagination" class="d-flex justify-content-between align-items-center mt-3">
+                            <div>
+                                <span id="resultsInfo">Mostrando 0 resultados</span>
+                            </div>
+                            <div>
+                                <button id="loadMoreBtn" class="btn btn-outline-primary" style="display: none;">
+                                    Cargar más resultados
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                     Estado vacío 
+                    <div id="emptyState" class="text-center py-4" style="display: none;">
+                        <i class="fas fa-chart-line fa-3x text-muted mb-3"></i>
+                        <p class="text-muted">No se encontraron datos históricos para los criterios seleccionados.</p>
+                    </div>
+
+                     Estado de error 
+                    <div id="errorState" class="text-center py-4" style="display: none;">
+                        <i class="fas fa-exclamation-triangle fa-3x text-danger mb-3"></i>
+                        <p class="text-danger">Error al cargar los datos históricos.</p>
+                        <button id="retryBtn" class="btn btn-outline-danger">Reintentar</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .badge-symbol {
+        background-color: #e9ecef;
+        color: #000000;
+        font-weight: 600;
+        padding: 0.35em 0.65em;
+        font-size: 0.9em;
+    }
+</style>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    let currentData = [];
+    let currentOffset = 0;
+    const limit = 50;
+
+    // Referencias a elementos
+    const loadingState = document.getElementById('loadingState');
+    const dataTable = document.getElementById('dataTable');
+    const emptyState = document.getElementById('emptyState');
+    const errorState = document.getElementById('errorState');
+    const tableBody = document.getElementById('historyTableBody');
+    const resultsInfo = document.getElementById('resultsInfo');
+    const loadMoreBtn = document.getElementById('loadMoreBtn');
+
+    // Funciones para mostrar diferentes estados
+    function showLoading() {
+        loadingState.style.display = 'block';
+        dataTable.style.display = 'none';
+        emptyState.style.display = 'none';
+        errorState.style.display = 'none';
+    }
+
+    function showData() {
+        loadingState.style.display = 'none';
+        dataTable.style.display = 'block';
+        emptyState.style.display = 'none';
+        errorState.style.display = 'none';
+    }
+
+    function showEmpty() {
+        loadingState.style.display = 'none';
+        dataTable.style.display = 'none';
+        emptyState.style.display = 'block';
+        errorState.style.display = 'none';
+    }
+
+    function showError() {
+        loadingState.style.display = 'none';
+        dataTable.style.display = 'none';
+        emptyState.style.display = 'none';
+        errorState.style.display = 'block';
+    }
+
+    // Función para cargar datos
+    async function loadHistoryData(append = false) {
+        if (!append) {
+            showLoading();
+            currentOffset = 0;
+            currentData = [];
+        }
+
+        try {
+            const symbol = document.getElementById('symbolFilter').value;
+            const startDate = document.getElementById('startDate').value;
+            const endDate = document.getElementById('endDate').value;
+
+            const params = new URLSearchParams({
+                limit: limit,
+                offset: currentOffset
+            });
+
+            if (symbol) params.append('symbol', symbol);
+            if (startDate) params.append('start_date', startDate);
+            if (endDate) params.append('end_date', endDate);
+
+            const response = await fetch(`/api/market-data/history?${params}`);
+            const result = await response.json();
+
+            if (result.success) {
+                if (append) {
+                    currentData = [...currentData, ...result.data];
+                } else {
+                    currentData = result.data;
+                }
+
+                if (currentData.length === 0) {
+                    showEmpty();
+                } else {
+                    renderTable(append);
+                    showData();
+                }
+
+                // Mostrar/ocultar botón "Cargar más"
+                loadMoreBtn.style.display = result.data.length === limit ? 'block' : 'none';
+                currentOffset += result.data.length;
+            } else {
+                showError();
+            }
+        } catch (error) {
+            console.error('Error:', error);
+            showError();
+        }
+    }
+
+    // Función para renderizar la tabla
+    function renderTable(append = false) {
+        if (!append) {
+            tableBody.innerHTML = '';
+        }
+
+        const startIndex = append ? currentData.length - limit : 0;
+        const endIndex = currentData.length;
+
+        for (let i = startIndex; i < endIndex; i++) {
+            const item = currentData[i];
+            const row = document.createElement('tr');
+            
+            row.innerHTML = `
+                <td>${formatDate(item.date)}</td>
+                <td><span class="badge badge-symbol">${item.symbol}</span></td>
+                <td><strong>$${parseFloat(item.price).toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 4})}</strong></td>
+                <td class="text-muted">${formatDateTime(item.timestamp)}</td>
+            `;
+            
+            tableBody.appendChild(row);
+        }
+
+        resultsInfo.textContent = `Mostrando ${currentData.length} resultados`;
+    }
+
+    // Funciones de formato
+    function formatDate(dateStr) {
+        return new Date(dateStr).toLocaleDateString('es-ES');
+    }
+
+    function formatDateTime(dateStr) {
+        return new Date(dateStr).toLocaleString('es-ES');
+    }
+
+    // Event listeners
+    document.getElementById('searchBtn').addEventListener('click', () => {
+        loadHistoryData(false);
+    });
+
+    document.getElementById('clearBtn').addEventListener('click', () => {
+        document.getElementById('symbolFilter').value = '';
+        document.getElementById('startDate').value = '';
+        document.getElementById('endDate').value = '';
+        loadHistoryData(false);
+    });
+
+    loadMoreBtn.addEventListener('click', () => {
+        loadHistoryData(true);
+    });
+
+    document.getElementById('retryBtn').addEventListener('click', () => {
+        loadHistoryData(false);
+    });
+
+    // Cargar datos iniciales
+    loadHistoryData(false);
+});
+</script>
+{% endblock %}

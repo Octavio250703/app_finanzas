@@ -1,0 +1,139 @@
+{% extends "base.html" %}
+
+{% block title %}Editar {{ investment.name }} - Gestor de Inversiones{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h1><i class="fas fa-edit me-2"></i>Editar Inversión</h1>
+    <div>
+        <a href="{{ url_for('view_investment', investment_id=investment.id) }}" class="btn btn-secondary me-2">
+            <i class="fas fa-eye me-2"></i>Ver Detalles
+        </a>
+        <a href="{{ url_for('dashboard') }}" class="btn btn-secondary">
+            <i class="fas fa-arrow-left me-2"></i>Dashboard
+        </a>
+    </div>
+</div>
+
+<div class="row justify-content-center">
+    <div class="col-lg-8">
+        <div class="card">
+            <div class="card-body">
+                <form method="POST">
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="name" class="form-label">Nombre de la Inversión *</label>
+                            <input type="text" class="form-control" id="name" name="name" value="{{ investment.name }}" required>
+                        </div>
+
+                        <div class="col-md-6 mb-3">
+                            <label for="organism" class="form-label">Organismo *</label>
+                            <select class="form-select" id="organism" name="organism" required>
+                                <option value="">Seleccionar organismo...</option>
+                                {% for org in ['Banco Nación', 'Banco Provincia', 'Banco Santander', 'Banco Galicia', 'BBVA', 'Banco Macro', 'Banco Patagonia', 'Mercado Pago', 'Uala', 'Brubank', 'Invertir Online', 'Balanz', 'Otro'] %}
+                                <option value="{{ org }}" {% if investment.organism == org %}selected{% endif %}>{{ org }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="description" class="form-label">Descripción</label>
+                        <textarea class="form-control" id="description" name="description" rows="3">{{ investment.description or '' }}</textarea>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="investment_type" class="form-label">Tipo de Inversión *</label>
+                            <select class="form-select" id="investment_type" name="investment_type" required>
+                                <option value="">Seleccionar tipo...</option>
+                                {% for type in ['plazo fijo', 'bonos', 'acciones', 'fondo comun', 'fci', 'lebac', 'lecap', 'cedear', 'crypto', 'otro'] %}
+                                <option value="{{ type }}" {% if investment.investment_type == type %}selected{% endif %}>{{ type|title }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+
+                        <div class="col-md-6 mb-3">
+                            <label for="status" class="form-label">Estado *</label>
+                            <select class="form-select" id="status" name="status" required>
+                                <option value="">Seleccionar estado...</option>
+                                {% for status in ['en estudio', 'activa', 'cerrada'] %}
+                                <option value="{{ status }}" {% if investment.status == status %}selected{% endif %}>{{ status|title }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="amount" class="form-label">Monto *</label>
+                            <input type="number" class="form-control" id="amount" name="amount" step="0.01" min="0" value="{{ investment.amount }}" required>
+                        </div>
+
+                        <div class="col-md-6 mb-3">
+                            <label for="currency" class="form-label">Moneda *</label>
+                            <select class="form-select" id="currency" name="currency" required>
+                                <option value="">Seleccionar moneda...</option>
+                                {% for curr in ['ARS', 'USD', 'EUR', 'BRL'] %}
+                                <option value="{{ curr }}" {% if investment.currency == curr %}selected{% endif %}>
+                                    {% if curr == 'ARS' %}Peso Argentino (ARS)
+                                    {% elif curr == 'USD' %}Dólar Estadounidense (USD)
+                                    {% elif curr == 'EUR' %}Euro (EUR)
+                                    {% elif curr == 'BRL' %}Real Brasileño (BRL)
+                                    {% endif %}
+                                </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="start_date" class="form-label">Fecha de Inicio *</label>
+                            <input type="date" class="form-control" id="start_date" name="start_date" value="{{ investment.start_date[:10] if investment.start_date else '' }}" required>
+                        </div>
+
+                        <div class="col-md-6 mb-3">
+                            <label for="end_date" class="form-label">Fecha de Finalización</label>
+                            <input type="date" class="form-control" id="end_date" name="end_date" value="{{ investment.end_date[:10] if investment.end_date else '' }}">
+                            <div class="form-text">Opcional - necesaria para calcular rendimientos</div>
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="annual_rate" class="form-label">Tasa Anual (%)</label>
+                        <input type="number" class="form-control" id="annual_rate" name="annual_rate" step="0.01" min="0" max="100" value="{{ investment.annual_rate or '' }}">
+                        <div class="form-text">Opcional - necesaria para calcular rendimientos estimados</div>
+                    </div>
+
+                    <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+                        <a href="{{ url_for('view_investment', investment_id=investment.id) }}" class="btn btn-secondary me-md-2">Cancelar</a>
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-save me-2"></i>Guardar Cambios
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Validar que la fecha de fin sea posterior a la de inicio
+    document.getElementById('start_date').addEventListener('change', function() {
+        document.getElementById('end_date').min = this.value;
+    });
+    
+    document.getElementById('end_date').addEventListener('change', function() {
+        const startDate = document.getElementById('start_date').value;
+        if (startDate && this.value && this.value < startDate) {
+            alert('La fecha de finalización debe ser posterior a la fecha de inicio');
+            this.value = '';
+        }
+    });
+});
+</script>
+{% endblock %}

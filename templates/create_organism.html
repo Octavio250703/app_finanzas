@@ -1,0 +1,234 @@
+{% extends "base_sidebar.html" %}
+
+{% block title %}Crear Organismo - Investment Manager{% endblock %}
+
+{% block content %}
+<div class="mb-4">
+    <nav aria-label="breadcrumb">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="{{ url_for('organisms') }}">Organismos</a></li>
+            <li class="breadcrumb-item active">Crear Organismo</li>
+        </ol>
+    </nav>
+    
+    <h1><i class="fas fa-plus me-2"></i>Crear Nuevo Organismo</h1>
+    <p class="text-muted">Registra una nueva entidad donde realizas inversiones</p>
+</div>
+
+<div class="row">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="fas fa-building me-2"></i>Información del Organismo</h5>
+            </div>
+            <div class="card-body">
+                <form method="POST" class="needs-validation" novalidate>
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <label for="name" class="form-label">Nombre Corto <span class="text-danger">*</span></label>
+                            <input type="text" 
+                                   class="form-control" 
+                                   id="name" 
+                                   name="name" 
+                                   required 
+                                   maxlength="200"
+                                   placeholder="Ej: AFIP, Banco Nación">
+                            <div class="invalid-feedback">
+                                El nombre es obligatorio.
+                            </div>
+                            <div class="form-text">Nombre corto para identificar el organismo</div>
+                        </div>
+                        <div class="col-md-6">
+                            <label for="country" class="form-label">País</label>
+                            <select class="form-select" id="country" name="country">
+                                <option value="Argentina" selected>Argentina</option>
+                                <option value="Brasil">Brasil</option>
+                                <option value="Chile">Chile</option>
+                                <option value="Colombia">Colombia</option>
+                                <option value="México">México</option>
+                                <option value="Perú">Perú</option>
+                                <option value="Uruguay">Uruguay</option>
+                                <option value="Estados Unidos">Estados Unidos</option>
+                                <option value="España">España</option>
+                                <option value="Otro">Otro</option>
+                            </select>
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="full_name" class="form-label">Nombre Completo</label>
+                        <input type="text" 
+                               class="form-control" 
+                               id="full_name" 
+                               name="full_name" 
+                               maxlength="500"
+                               placeholder="Ej: Administración Federal de Ingresos Públicos de Argentina">
+                        <div class="form-text">Nombre oficial completo del organismo</div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="description" class="form-label">Descripción</label>
+                        <textarea class="form-control" 
+                                  id="description" 
+                                  name="description" 
+                                  rows="3"
+                                  placeholder="Describe brevemente qué tipo de organismo es y qué servicios ofrece..."></textarea>
+                    </div>
+                    
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <label for="website" class="form-label">Sitio Web</label>
+                            <div class="input-group">
+                                <span class="input-group-text"><i class="fas fa-globe"></i></span>
+                                <input type="url" 
+                                       class="form-control" 
+                                       id="website" 
+                                       name="website" 
+                                       placeholder="https://www.ejemplo.com">
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <label for="contact_email" class="form-label">Email de Contacto</label>
+                            <div class="input-group">
+                                <span class="input-group-text"><i class="fas fa-envelope"></i></span>
+                                <input type="email" 
+                                       class="form-control" 
+                                       id="contact_email" 
+                                       name="contact_email" 
+                                       placeholder="contacto@ejemplo.com">
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <label for="contact_phone" class="form-label">Teléfono</label>
+                            <div class="input-group">
+                                <span class="input-group-text"><i class="fas fa-phone"></i></span>
+                                <input type="tel" 
+                                       class="form-control" 
+                                       id="contact_phone" 
+                                       name="contact_phone" 
+                                       placeholder="+54 11 1234-5678">
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <label for="address" class="form-label">Dirección</label>
+                            <div class="input-group">
+                                <span class="input-group-text"><i class="fas fa-map-marker-alt"></i></span>
+                                <input type="text" 
+                                       class="form-control" 
+                                       id="address" 
+                                       name="address" 
+                                       placeholder="Dirección física del organismo">
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="d-flex gap-2">
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-save me-2"></i>Crear Organismo
+                        </button>
+                        <a href="{{ url_for('organisms') }}" class="btn btn-secondary">
+                            <i class="fas fa-times me-2"></i>Cancelar
+                        </a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-4">
+        <div class="card">
+            <div class="card-header">
+                <h6 class="mb-0"><i class="fas fa-info-circle me-2"></i>Información</h6>
+            </div>
+            <div class="card-body">
+                <h6>¿Qué es un Organismo?</h6>
+                <p class="small text-muted">
+                    Un organismo es cualquier entidad, empresa o institución donde realizas inversiones. 
+                    Puede ser un banco, una empresa de valores, una entidad gubernamental, etc.
+                </p>
+                
+                <h6>Beneficios de organizar por Organismos:</h6>
+                <ul class="small text-muted">
+                    <li>Agrupa inversiones por entidad</li>
+                    <li>Facilita el seguimiento</li>
+                    <li>Permite calificar organismos</li>
+                    <li>Análisis comparativo</li>
+                    <li>Chat y notas por organismo</li>
+                </ul>
+                
+                <div class="alert alert-info">
+                    <small>
+                        <i class="fas fa-lightbulb me-1"></i>
+                        <strong>Tip:</strong> Solo el nombre corto es obligatorio. 
+                        Puedes completar el resto de la información más tarde.
+                    </small>
+                </div>
+            </div>
+        </div>
+        
+        <div class="card mt-3">
+            <div class="card-header">
+                <h6 class="mb-0"><i class="fas fa-examples me-2"></i>Ejemplos</h6>
+            </div>
+            <div class="card-body">
+                <div class="mb-2">
+                    <strong>Organismo Gubernamental:</strong>
+                    <br><small class="text-muted">AFIP - Administración Federal de Ingresos Públicos</small>
+                </div>
+                <div class="mb-2">
+                    <strong>Banco:</strong>
+                    <br><small class="text-muted">Banco Nación - Banco de la Nación Argentina</small>
+                </div>
+                <div class="mb-2">
+                    <strong>Broker:</strong>
+                    <br><small class="text-muted">InvertirOnline - Plataforma de inversiones</small>
+                </div>
+                <div>
+                    <strong>Empresa:</strong>
+                    <br><small class="text-muted">YPF - YPF Sociedad Anónima</small>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Auto-complete nombre completo basado en el nombre corto
+    const nameInput = document.getElementById('name');
+    const fullNameInput = document.getElementById('full_name');
+    
+    nameInput.addEventListener('blur', function() {
+        if (this.value && !fullNameInput.value) {
+            // Sugerir nombre completo basado en organismos conocidos
+            const suggestions = {
+                'AFIP': 'Administración Federal de Ingresos Públicos de Argentina',
+                'ANSES': 'Administración Nacional de la Seguridad Social',
+                'Banco Nación': 'Banco de la Nación Argentina',
+                'Banco Santander': 'Banco Santander Río S.A.',
+                'BBVA': 'BBVA Argentina',
+                'YPF': 'YPF Sociedad Anónima',
+                'Telecom': 'Telecom Argentina S.A.'
+            };
+            
+            if (suggestions[this.value]) {
+                fullNameInput.value = suggestions[this.value];
+            }
+        }
+    });
+    
+    // Validación en tiempo real para URL
+    const websiteInput = document.getElementById('website');
+    websiteInput.addEventListener('blur', function() {
+        if (this.value && !this.value.startsWith('http://') && !this.value.startsWith('https://')) {
+            this.value = 'https://' + this.value;
+        }
+    });
+});
+</script>
+{% endblock %}

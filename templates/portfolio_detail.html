@@ -1,0 +1,510 @@
+{% extends "base_sidebar.html" %}
+
+{% block title %}{{ portfolio.name }} - Detalle de Cartera{% endblock %}
+
+{% block extra_head %}
+<style>
+    .portfolio-header {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        border-radius: 15px;
+        color: white;
+        padding: 2rem;
+        margin-bottom: 2rem;
+    }
+    
+    .stats-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 1.5rem;
+        margin-top: 1.5rem;
+    }
+    
+    .stat-card {
+        background: rgba(255, 255, 255, 0.1);
+        border-radius: 10px;
+        padding: 1.5rem;
+        text-align: center;
+        backdrop-filter: blur(10px);
+    }
+    
+    .stat-value {
+        font-size: 2rem;
+        font-weight: bold;
+        margin-bottom: 0.5rem;
+    }
+    
+    .stat-label {
+        font-size: 0.9rem;
+        opacity: 0.9;
+    }
+    
+    .positions-table {
+        background: white;
+        border-radius: 15px;
+        overflow: hidden;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    }
+    
+    .table-header {
+        background: #f8f9fa;
+        padding: 1.5rem;
+        border-bottom: 1px solid #dee2e6;
+    }
+    
+    .position-row {
+        transition: background-color 0.2s ease;
+    }
+    
+    .position-row:hover {
+        background-color: #f8f9fa;
+    }
+    
+    .weight-bar {
+        height: 6px;
+        border-radius: 3px;
+        background: linear-gradient(90deg, #007bff, #28a745);
+        margin-top: 4px;
+    }
+    
+    .add-position-card {
+        border: 2px dashed #dee2e6;
+        border-radius: 15px;
+        padding: 2rem;
+        text-align: center;
+        cursor: pointer;
+        transition: all 0.3s ease;
+    }
+    
+    .add-position-card:hover {
+        border-color: #007bff;
+        background: #e3f2fd;
+    }
+    
+    .chart-container {
+        background: white;
+        border-radius: 15px;
+        padding: 1.5rem;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        margin-bottom: 2rem;
+    }
+    
+    .info-badge {
+        background: rgba(255, 255, 255, 0.2);
+        border-radius: 20px;
+        padding: 0.5rem 1rem;
+        font-size: 0.9rem;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Header de la cartera -->
+    <div class="portfolio-header">
+        <div class="d-flex justify-content-between align-items-start">
+            <div>
+                <h1 class="mb-0">
+                    <i class="fas fa-chart-pie me-2"></i>
+                    {{ portfolio.name }}
+                </h1>
+                <p class="mb-0 opacity-75">{{ organism.name }}</p>
+                {% if portfolio.description %}
+                <p class="mt-2 opacity-90">{{ portfolio.description }}</p>
+                {% endif %}
+            </div>
+            <div class="d-flex gap-2">
+                <button class="btn btn-light" onclick="refreshPortfolioData()">
+                    <i class="fas fa-sync-alt me-2"></i>Actualizar
+                </button>
+                <button class="btn btn-success" onclick="showAddPositionModal()">
+                    <i class="fas fa-plus me-2"></i>Agregar Posición
+                </button>
+                <a href="{{ url_for('portfolios_page', organism_id=organism.id) }}" class="btn btn-outline-light">
+                    <i class="fas fa-arrow-left me-2"></i>Volver
+                </a>
+            </div>
+        </div>
+        
+        <!-- Estadísticas principales -->
+        <div class="stats-grid">
+            <div class="stat-card">
+                <div class="stat-value" id="totalValue">
+                    ${{ "%.2f"|format(portfolio_value.total_value|default(0)|float) if portfolio_value else "0.00" }}
+                </div>
+                <div class="stat-label">Valor Total Actual</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value" id="totalPositions">{{ portfolio_value.positions_detail|length if portfolio_value else 0 }}</div>
+                <div class="stat-label">Total Posiciones</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value" id="calculationDate">
+                    {{ portfolio_value.calculation_date if portfolio_value else 'N/A' }}
+                </div>
+                <div class="stat-label">Fecha de Cálculo</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value" id="symbolsFound">
+                    {{ (portfolio_value.positions_detail|length - portfolio_value.symbols_not_found|length) if portfolio_value else 0 }}
+                </div>
+                <div class="stat-label">Símbolos Encontrados</div>
+            </div>
+        </div>
+        
+        <!-- Mensaje informativo sobre precios no encontrados -->
+        {% if portfolio_value and portfolio_value.symbols_not_found %}
+        <div class="mt-3">
+            <div class="info-badge">
+                <i class="fas fa-exclamation-triangle me-2"></i>
+                Símbolos sin datos de precio: {{ portfolio_value.symbols_not_found|join(', ') }}
+            </div>
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- Gráfico de composición -->
+    {% if portfolio_value and portfolio_value.positions_detail %}
+    <div class="chart-container">
+        <h5 class="mb-3"><i class="fas fa-chart-donut me-2"></i>Composición de la Cartera</h5>
+        <canvas id="portfolioChart" width="400" height="200"></canvas>
+    </div>
+    {% endif %}
+
+    <!-- Tabla de posiciones -->
+    <div class="positions-table">
+        <div class="table-header">
+            <div class="d-flex justify-content-between align-items-center">
+                <h5 class="mb-0"><i class="fas fa-list me-2"></i>Posiciones</h5>
+                <span class="badge bg-primary">
+                    {{ portfolio_value.positions_detail|length if portfolio_value else 0 }} posiciones
+                </span>
+            </div>
+        </div>
+        
+        {% if portfolio_value and portfolio_value.positions_detail %}
+        <div class="table-responsive">
+            <table class="table table-hover mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th>Símbolo</th>
+                        <th class="text-end">Cantidad</th>
+                        <th class="text-end">Precio Actual</th>
+                        <th class="text-end">Valor Posición</th>
+                        <th class="text-end">% Peso</th>
+                        <th>Notas</th>
+                        <th class="text-center">Acciones</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for position in portfolio_value.positions_detail %}
+                    <tr class="position-row">
+                        <td>
+                            <strong class="text-primary">{{ position.symbol }}</strong>
+                        </td>
+                        <td class="text-end">
+                            {{ "%.2f"|format(position.quantity|default(0)|float) }}
+                        </td>
+                        <td class="text-end">
+                            {% set current_price = position.current_price|default(0)|float %}
+                            {% if current_price > 0 %}
+                                ${{ "%.2f"|format(current_price) }}
+                            {% else %}
+                                <span class="text-muted">Sin datos</span>
+                            {% endif %}
+                        </td>
+                        <td class="text-end">
+                            <strong>${{ "%.2f"|format(position.position_value|default(0)|float) }}</strong>
+                        </td>
+                        <td class="text-end">
+                            {% set weight_pct = position.weight_percentage|default(0)|float %}
+                            <div>{{ "%.1f"|format(weight_pct) }}%</div>
+                            <div class="weight-bar" style="width: {{ weight_pct }}%;"></div>
+                        </td>
+                        <td>
+                            <small class="text-muted">{{ position.notes or '-' }}</small>
+                        </td>
+                        <td class="text-center">
+                            <button class="btn btn-sm btn-outline-primary me-1" onclick="editPosition('{{ position.symbol }}')">
+                                <i class="fas fa-edit"></i>
+                            </button>
+                            <button class="btn btn-sm btn-outline-danger" onclick="removePosition('{{ position.symbol }}')">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="p-5 text-center">
+            <i class="fas fa-chart-line fa-4x text-muted mb-3"></i>
+            <h4 class="text-muted">No hay posiciones en esta cartera</h4>
+            <p class="text-muted mb-4">Comienza agregando tu primera posición</p>
+            <button class="btn btn-primary btn-lg" onclick="showAddPositionModal()">
+                <i class="fas fa-plus me-2"></i>Agregar Primera Posición
+            </button>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Modal para agregar/editar posición -->
+<div class="modal fade" id="positionModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="positionModalTitle">
+                    <i class="fas fa-plus me-2"></i>Agregar Posición
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="positionForm">
+                    <input type="hidden" id="portfolioId" value="{{ portfolio.id }}">
+                    <input type="hidden" id="originalSymbol" value="">
+                    
+                    <div class="mb-3">
+                        <label for="positionSymbol" class="form-label">Símbolo *</label>
+                        <input type="text" class="form-control text-uppercase" id="positionSymbol" required 
+                               placeholder="Ej: AL30, GGAL, YPFD" style="text-transform: uppercase;">
+                        <div class="form-text">Ingresa el símbolo de la cotización</div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="positionQuantity" class="form-label">Cantidad *</label>
+                        <input type="number" step="0.0001" class="form-control" id="positionQuantity" required 
+                               placeholder="Ej: 1000, 500.5">
+                        <div class="form-text">Cantidad de títulos/acciones</div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="positionNotes" class="form-label">Notas</label>
+                        <textarea class="form-control" id="positionNotes" rows="2" 
+                                  placeholder="Notas adicionales sobre esta posición"></textarea>
+                    </div>
+                    
+                    <div class="alert alert-info">
+                        <i class="fas fa-info-circle me-2"></i>
+                        <strong>Nota:</strong> El valor de la posición se calcula automáticamente usando los precios actuales del mercado.
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <button type="button" class="btn btn-primary" onclick="savePosition()">
+                    <i class="fas fa-save me-2"></i>Guardar Posición
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Toast container -->
+<div id="toastContainer" class="position-fixed top-0 end-0 p-3" style="z-index: 1055;"></div>
+
+{% endblock %}
+
+{% block extra_scripts %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Crear gráfico de composición si hay datos
+    {% if portfolio_value and portfolio_value.positions_detail %}
+    createPortfolioChart();
+    {% endif %}
+});
+
+function createPortfolioChart() {
+    const ctx = document.getElementById('portfolioChart').getContext('2d');
+    const positions = {{ portfolio_value.positions_detail | tojson | safe if portfolio_value else [] }};
+    
+    const labels = positions.map(p => p.symbol);
+    const data = positions.map(p => {
+        const weight = parseFloat(p.weight_percentage) || 0;
+        return weight;
+    });
+    const colors = [
+        '#FF6384', '#36A2EB', '#FFCE56', '#4BC0C0', '#9966FF',
+        '#FF9F40', '#FF6384', '#C9CBCF', '#4BC0C0', '#FF6384'
+    ];
+    
+    new Chart(ctx, {
+        type: 'doughnut',
+        data: {
+            labels: labels,
+            datasets: [{
+                data: data,
+                backgroundColor: colors.slice(0, labels.length),
+                borderWidth: 2,
+                borderColor: '#fff'
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: true,
+            plugins: {
+                legend: {
+                    position: 'right'
+                },
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            const symbol = context.label;
+                            const percentage = context.parsed;
+                            const position = positions[context.dataIndex];
+                            const posValue = parseFloat(position.position_value) || 0;
+                            return symbol + ': ' + percentage.toFixed(1) + '% ($' + posValue.toLocaleString() + ')';
+                        }
+                    }
+                }
+            }
+        }
+    });
+}
+
+function showAddPositionModal() {
+    document.getElementById('positionModalTitle').innerHTML = '<i class="fas fa-plus me-2"></i>Agregar Posición';
+    document.getElementById('positionForm').reset();
+    document.getElementById('originalSymbol').value = '';
+    
+    const modal = new bootstrap.Modal(document.getElementById('positionModal'));
+    modal.show();
+}
+
+function editPosition(symbol) {
+    const positions = {{ portfolio_value.positions_detail | tojson | safe if portfolio_value else [] }};
+    const position = positions.find(p => p.symbol === symbol);
+    
+    if (position) {
+        document.getElementById('positionModalTitle').innerHTML = '<i class="fas fa-edit me-2"></i>Editar Posición';
+        document.getElementById('originalSymbol').value = symbol;
+        document.getElementById('positionSymbol').value = symbol;
+        document.getElementById('positionQuantity').value = parseFloat(position.quantity) || 0;
+        document.getElementById('positionNotes').value = position.notes || '';
+        
+        const modal = new bootstrap.Modal(document.getElementById('positionModal'));
+        modal.show();
+    }
+}
+
+async function savePosition() {
+    const portfolioId = document.getElementById('portfolioId').value;
+    const symbol = document.getElementById('positionSymbol').value.toUpperCase().trim();
+    const quantity = document.getElementById('positionQuantity').value;
+    const notes = document.getElementById('positionNotes').value.trim();
+    
+    if (!symbol || !quantity) {
+        showToast('Por favor completa los campos requeridos', 'error');
+        return;
+    }
+    
+    try {
+        const response = await fetch('/api/portfolio/' + portfolioId + '/positions', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                symbol: symbol,
+                quantity: parseFloat(quantity),
+                notes: notes
+            })
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+            showToast('Posición guardada exitosamente', 'success');
+            
+            // Cerrar modal
+            const modal = bootstrap.Modal.getInstance(document.getElementById('positionModal'));
+            modal.hide();
+            
+            // Recargar página
+            setTimeout(() => {
+                window.location.reload();
+            }, 1000);
+        } else {
+            showToast(data.error || 'Error al guardar posición', 'error');
+        }
+    } catch (error) {
+        console.error('Error:', error);
+        showToast('Error de conexión al guardar posición', 'error');
+    }
+}
+
+async function removePosition(symbol) {
+    if (!confirm('¿Estás seguro de que quieres eliminar la posición de ' + symbol + '?')) {
+        return;
+    }
+    
+    const portfolioId = {{ portfolio.id }};
+    
+    try {
+        const response = await fetch('/api/portfolio/' + portfolioId + '/positions/' + symbol, {
+            method: 'DELETE'
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+            showToast('Posición eliminada exitosamente', 'success');
+            setTimeout(() => {
+                window.location.reload();
+            }, 1000);
+        } else {
+            showToast(data.error || 'Error al eliminar posición', 'error');
+        }
+    } catch (error) {
+        console.error('Error:', error);
+        showToast('Error de conexión al eliminar posición', 'error');
+    }
+}
+
+async function refreshPortfolioData() {
+    const refreshBtn = document.querySelector('button[onclick="refreshPortfolioData()"]');
+    const originalHtml = refreshBtn.innerHTML;
+    
+    refreshBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Actualizando...';
+    refreshBtn.disabled = true;
+    
+    try {
+        // Simplemente recargar la página para obtener datos frescos
+        window.location.reload();
+    } catch (error) {
+        console.error('Error:', error);
+        showToast('Error al actualizar datos', 'error');
+        refreshBtn.innerHTML = originalHtml;
+        refreshBtn.disabled = false;
+    }
+}
+
+function showToast(message, type) {
+    type = type || 'info';
+    const bgClass = type === 'success' ? 'success' : 'danger';
+    const iconClass = type === 'success' ? 'check-circle' : 'exclamation-circle';
+    
+    const toastHtml = '<div class="toast align-items-center text-white bg-' + bgClass + ' border-0" role="alert">' +
+        '<div class="d-flex">' +
+            '<div class="toast-body">' +
+                '<i class="fas fa-' + iconClass + ' me-2"></i>' +
+                message +
+            '</div>' +
+            '<button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>' +
+        '</div>' +
+    '</div>';
+    
+    const toastContainer = document.getElementById('toastContainer');
+    toastContainer.insertAdjacentHTML('beforeend', toastHtml);
+    
+    const toastElement = toastContainer.lastElementChild;
+    const toast = new bootstrap.Toast(toastElement);
+    toast.show();
+    
+    toastElement.addEventListener('hidden.bs.toast', () => {
+        toastElement.remove();
+    });
+}
+</script>
+{% endblock %}
